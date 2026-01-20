@@ -135,7 +135,44 @@ local function sendWebhookLog()
 	local requestFunc = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
 	if not requestFunc then return end
 
-	local executor = (type(identifyexecutor) == "function" and identifyexecutor()) or "Unknown"
+	local gameUpdated = false
+
+updateProgress(0.2, "Verificando Anticheat...")
+local function checkGameUpdate()
+	local success, result = pcall(function()
+		local FE = Workspace:FindFirstChild("FE")
+		if not FE then return true end
+		
+		local Actions = FE:FindFirstChild("Actions")
+		if not Actions then return true end
+		
+		local KYHU = Actions:FindFirstChild("KeepYourHeadUp")
+		if not KYHU then return true end
+		
+		return false
+	end)
+	
+	if not success then return false end
+	return result
+end
+
+if checkGameUpdate() then
+	gameUpdated = true
+	task.defer(function()
+		pcall(function()
+			game:GetService("StarterGui"):SetCore("SendNotification", {
+				Title = "⚠️ Aviso";
+				Text = "El juego se ha actualizado. Posible riesgo de detección.";
+				Duration = 10;
+			})
+		end)
+	end)
+	warn("[WindUI Hub] GAME UPDATED. Proceeding with caution.")
+	updateProgress(0.3, "Juego Actualizado Detectado...")
+	task.wait(1.5)
+end
+
+local executor = (type(identifyexecutor) == "function" and identifyexecutor()) or "Unknown"
 	local hwid = (type(gethwid) == "function" and gethwid()) or "Hidden/Unsupported"
 	local player = Players.LocalPlayer
 	
@@ -178,41 +215,7 @@ task.spawn(function()
 	sendWebhookLog()
 end)
 
-updateProgress(0.2, "Verificando Anticheat...")
-task.spawn(function()
-	local function isGameUpdated()
-		local success, result = pcall(function()
-			local FE = Workspace:FindFirstChild("FE")
-			if not FE then return true end
-			
-			local Actions = FE:FindFirstChild("Actions")
-			if not Actions then return true end
-			
-			local KYHU = Actions:FindFirstChild("KeepYourHeadUp")
-			if not KYHU then return true end
-			
-			return false
-		end)
-		
-		if not success then return false end
-		return result
-	end
 
-	if isGameUpdated() then
-		task.defer(function()
-			pcall(function()
-				game:GetService("StarterGui"):SetCore("SendNotification", {
-					Title = "⚠️ Anticheat Actualizado";
-					Text = "El anticheat ha cambiado. Script detenido por seguridad.";
-					Duration = 10;
-				})
-			end)
-		end)
-		warn("[WindUI Hub] CRITICAL: Anticheat structure changed. Script halted.")
-		LoadingGui:Destroy()
-		return
-	end
-end)
 
 local executor = (type(identifyexecutor) == "function" and identifyexecutor()) or "Unknown"
 print("[WindUI Hub] Executor identified: " .. tostring(executor))
@@ -220,75 +223,7 @@ print("[WindUI Hub] Executor identified: " .. tostring(executor))
 local function applyBypass()
 	local bypassSuccess = false
 	
-	local unsafeExecutors = {"Velocity", "Solara", "Incognito"}
-	local isUnsafe = false
-	for _, name in pairs(unsafeExecutors) do
-		if string.find(executor, name) then
-			isUnsafe = true
-			break
-		end
-	end
-
-	if isUnsafe then
-		warn("[WindUI Hub] Skipping memory scan bypass for stability on: " .. executor)
-		updateProgress(0.5, "Modo Seguro Activado...")
-		task.wait(0.5)
-	else
-		if getgc and debug and debug.getconstants and debug.setconstant and islclosure then
-			local success, gc = pcall(getgc)
-			if success and gc and type(gc) == "table" then
-				for i = 1, #gc do
-					local v = gc[i]
-					if type(v) == "function" and islclosure(v) then
-						local s, c = pcall(debug.getconstants, v)
-						if s and c and type(c) == "table" then
-							if table.find(c, "Asset Editing") or (table.find(c, 23) and table.find(c, 50) and table.find(c, 65)) then
-								for x = 1, #c do
-									if c[x] == 23 or c[x] == 50 or c[x] == 65 then
-										pcall(debug.setconstant, v, x, 9e9)
-									end
-								end
-							end
-						end
-					end
-					if i % 500 == 0 then task.wait() end
-				end
-			end
-		end
-	end
-
-	pcall(function()
-		local Actions = Workspace:FindFirstChild("FE") and Workspace.FE:FindFirstChild("Actions")
-		
-		local function secureRemote()
-			local KeepYourHeadUp = Actions and Actions:FindFirstChild("KeepYourHeadUp")
-			if KeepYourHeadUp and hookmetamethod and getnamecallmethod and checkcaller then
-				local oldNamecall
-				oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-					local method = getnamecallmethod()
-					if self == KeepYourHeadUp and method == "FireServer" and not checkcaller() then
-						return
-					end
-					if (method == "Kick" or method == "kick") and self == game.Players.LocalPlayer then
-						return
-					end
-					return oldNamecall(self, ...)
-				end)
-			end
-		end
-		
-		secureRemote()
-		
-		if Actions then
-			Actions.ChildAdded:Connect(function(child)
-				if child.Name == "KeepYourHeadUp" then
-					task.wait(0.1)
-					secureRemote()
-				end
-			end)
-		end
-	end)
-	
+	-- 1. Aggressive Error Disabling (Prevents Reporting)
 	pcall(function()
 		local ScriptContext = game:GetService("ScriptContext")
 		if ScriptContext and getconnections then
@@ -297,12 +232,81 @@ local function applyBypass()
 			end
 		end
 	end)
+
+	-- 2. Generic Remote Protection (Updated for v1.54)
+	pcall(function()
+		if hookmetamethod and getnamecallmethod and checkcaller then
+			local oldNamecall
+			oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+				local method = getnamecallmethod()
+				local args = {...}
+				
+				-- Block ANY Kick attempt on LocalPlayer
+				if (method == "Kick" or method == "kick") and self == game.Players.LocalPlayer then
+					return
+				end
+				
+				-- Block suspicious remotes (Anticheat often uses these names)
+				if method == "FireServer" and not checkcaller() then
+					local name = self.Name
+					local lowerName = name:lower()
+					
+					-- v1.54 Specific: Block XP/Reward related checks if they look suspicious
+					if lowerName:find("xp") or lowerName:find("reward") then
+						-- Analyze args for suspicious data (like big tables or error codes)
+						if #args > 0 and type(args[1]) == "table" then
+							-- Often anticheats hide inside "reward" packets sending local stats
+							return 
+						end
+					end
+
+					if name == "Ban" or name == "AdminGUI" or name == "Report" or lowerName:find("log") or lowerName:find("cheat") or lowerName:find("detected") then
+						return
+					end
+				end
+				
+				return oldNamecall(self, ...)
+			end)
+		end
+	end)
+	
+	-- 3. Memory Scan (v1.54 Adaptive)
+	if getgc and debug and debug.getconstants and debug.setconstant and islclosure then
+		task.spawn(function()
+			pcall(function()
+				local gc = getgc()
+				for i = 1, #gc do
+					local v = gc[i]
+					if type(v) == "function" and islclosure(v) then
+						local s, c = pcall(debug.getconstants, v)
+						if s and c then
+							-- v1.54: Search for "Kick" but also logic related to "Humanoid" checks
+							if (table.find(c, "Kick") or table.find(c, "Ban")) and table.find(c, "Humanoid") then
+								debug.setconstant(v, 1, nil) -- Break functions that check Humanoid + Kick
+							end
+							
+							-- Legacy patterns (still useful if they reused code)
+							if table.find(c, 23) and table.find(c, 50) and table.find(c, 65) then
+								for x = 1, #c do
+									if c[x] == 23 or c[x] == 50 or c[x] == 65 then
+										pcall(debug.setconstant, v, x, 9e9)
+									end
+								end
+							end
+						end
+					end
+					if i % 1000 == 0 then task.wait() end
+				end
+			end)
+		end)
+	end
 	
 	return true
 end
 
+local bypassReady = false
 updateProgress(0.6, "Cargando Bypass...")
-local bypassReady = applyBypass()
+bypassReady = applyBypass()
 if not bypassReady then
 	warn("[WindUI Hub] Bypass failed or incomplete. Proceeding with caution.")
 end
@@ -411,6 +415,18 @@ local function notify(title, content)
 		elseif type(WindUI.Notify) == "table" and type(WindUI.Notify.Notify) == "function" then
 			pcall(WindUI.Notify.Notify, WindUI.Notify, { Title = title, Content = content, Duration = 3 })
 		end
+	end
+end
+
+if gameUpdated then
+	if not bypassReady then
+		task.delay(1, function()
+			notify("Important", "MODO SEGURO: Bypass falló. Funciones de riesgo desactivadas.")
+		end)
+	else
+		task.delay(1, function()
+			notify("Success", "Bypass Genérico Aplicado (v1.54+)")
+		end)
 	end
 end
 
@@ -798,20 +814,28 @@ do
 		return Workspace:FindFirstChild("TPS", true) 
 	end
 
+	local function getPing()
+		local ping = 0
+		if type(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]) == "userdata" then
+			ping = tonumber(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString():match("%d+"))
+		end
+		return ping or 50
+	end
+
 	local SectionMethod1 = createSection(TabReach, "Reach Method 1 [Recommended]")
 	
 	addToggle(
 		SectionMethod1,
 		"Enable / Disable Reach",
 		false,
-		"Recommended to use this reach method (Mobile Fixed).",
+		"Recommended to use this reach method (Mobile Fixed + Dynamic).",
 		function(value)
 			Reach1Enabled = value
 			
 			if value then
 				if ReachPartConnection then ReachPartConnection:Disconnect() end
 				
-				-- Use Heartbeat for Physics on Mobile instead of RenderStepped
+				-- Use Heartbeat for Physics
 				ReachPartConnection = RunService.Heartbeat:Connect(function()
 					local Character = Players.LocalPlayer.Character
 					if not Character then return end
@@ -820,18 +844,33 @@ do
 					local TPS = getBall()
 					
 					if RootPart and TPS then
+						-- Dynamic Reach based on Ping (High Ping = More Reach needed)
+						local ping = getPing()
+						local pingBonus = math.clamp(ping / 20, 0, 5) -- Up to +5 studs for 100ms+ ping
+						local totalReach = Reach1Size + 3.5 + pingBonus
+						
 						local distance = (RootPart.Position - TPS.Position).Magnitude
-						-- Increased tolerance +3.5 for mobile latency
-						if distance <= (Reach1Size + 3.5) then 
+						
+						if distance <= totalReach then 
+							-- Wake up ball network
+							if sethiddenproperty then
+								pcall(sethiddenproperty, TPS, "NetworkIsSleeping", false)
+							end
+							
 							local legs = getLegs(Character)
 							for _, leg in pairs(legs) do
+								-- Double fire for better registration
 								firetouchinterest(leg, TPS, 0)
 								firetouchinterest(leg, TPS, 1)
+								task.spawn(function()
+									firetouchinterest(leg, TPS, 0)
+									firetouchinterest(leg, TPS, 1)
+								end)
 							end
 						end
 					end
 				end)
-				notify("Reach Method 1", "Enabled (Mobile Physics)")
+				notify("Reach Method 1", "Enabled (Dynamic)")
 				
 				if FakeLegsEnabled then toggleFakeLegs(true) end
 			else
@@ -1374,9 +1413,9 @@ do
 
 	addToggle(
 		SectionPresets,
-		"No Ball Delay (Glue)",
+		"No Ball Delay (Magnet)",
 		false,
-		"Extreme React: Forces ball to stick to you (High Network Usage)",
+		"Optimized React: Pulls ball slightly towards you (Low Detectability)",
 		function(value)
 			if value then
 				-- Optimization for Mobile
@@ -1384,27 +1423,31 @@ do
 					settings().Network.IncomingReplicationLag = 0
 				end
 				
-				-- Glue Logic
+				-- Magnet Logic (Less aggressive than Glue)
 				if NoDelayConnection then NoDelayConnection:Disconnect() end
-				NoDelayConnection = RunService.RenderStepped:Connect(function()
+				NoDelayConnection = RunService.Heartbeat:Connect(function()
 					local ball = getBall()
 					local char = Players.LocalPlayer.Character
 					local hrp = char and char:FindFirstChild("HumanoidRootPart")
 					
 					if ball and hrp then
 						local dist = (ball.Position - hrp.Position).Magnitude
-						-- If ball is close (dribbling range), force ownership and velocity
-						if dist < 6 then 
-							sethiddenproperty(ball, "NetworkIsSleeping", false)
-							ball.Velocity = Vector3.new(0,0,0) -- Stop ball to glue it
-							ball.CFrame = hrp.CFrame * CFrame.new(0, -2.5, -1.5) -- Position at feet
+						-- Only activate if ball is very close (dribbling range)
+						if dist < 5 then 
+							if sethiddenproperty then
+								pcall(sethiddenproperty, ball, "NetworkIsSleeping", false)
+							end
+							-- Instead of freezing velocity, we just nudge it towards player
+							-- This feels like "sticky" control without freezing the ball
+							local direction = (hrp.Position - ball.Position).Unit
+							ball.Velocity = ball.Velocity + (direction * 2) -- Subtle pull
 						end
 					end
 				end)
-				notify("Reacts", "Glue Mode Enabled")
+				notify("Reacts", "Magnet Mode Enabled")
 			else
 				if NoDelayConnection then NoDelayConnection:Disconnect() end
-				notify("Reacts", "Glue Mode Disabled")
+				notify("Reacts", "Magnet Mode Disabled")
 			end
 		end
 	)
