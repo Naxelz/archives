@@ -117,25 +117,11 @@ end
 local StarterGui = game:GetService("StarterGui")
 local Workspace = game:GetService("Workspace")
 
-local WebhookUrl = "https://discord.com/api/webhooks/1462979749625200724/JhJEhdpNZWx5du4t5Dh3jLGFRdqgTuI8I-yWMoKLDHvWZ-YehX1i1lmasXf9Ov8z2-US"
 
-local function getDeviceType()
-	if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
-		return "Mobile"
-	elseif UserInputService.GamepadEnabled then
-		return "Console"
-	else
-		return "PC"
-	end
-end
 
-local function sendWebhookLog()
-	if WebhookUrl == "" or not string.find(WebhookUrl, "http") then return end
-	
-	local requestFunc = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
-	if not requestFunc then return end
 
-	local gameUpdated = false
+
+local gameUpdated = false
 
 updateProgress(0.2, "Verificando Anticheat...")
 local function checkGameUpdate()
@@ -171,51 +157,6 @@ if checkGameUpdate() then
 	updateProgress(0.3, "Juego Actualizado Detectado...")
 	task.wait(1.5)
 end
-
-local executor = (type(identifyexecutor) == "function" and identifyexecutor()) or "Unknown"
-	local hwid = (type(gethwid) == "function" and gethwid()) or "Hidden/Unsupported"
-	local player = Players.LocalPlayer
-	
-	local embed = {
-		["title"] = "🔔 Script Executed",
-		["color"] = 3604915,
-		["fields"] = {
-			{ ["name"] = "👤 User", ["value"] = player.Name .. " (" .. player.DisplayName .. ")", ["inline"] = true },
-			{ ["name"] = "🆔 ID", ["value"] = tostring(player.UserId), ["inline"] = true },
-			{ ["name"] = "💉 Executor", ["value"] = executor, ["inline"] = true },
-			{ ["name"] = "📱 Device", ["value"] = getDeviceType(), ["inline"] = true },
-			{ ["name"] = "🔑 HWID", ["value"] = "||" .. hwid .. "||", ["inline"] = false },
-			{ ["name"] = "🎮 Game ID", ["value"] = tostring(game.PlaceId), ["inline"] = true }
-		},
-		["footer"] = { ["text"] = "v0x Hub Logger" },
-		["timestamp"] = DateTime.now():ToIsoDate()
-	}
-
-	local success, response = pcall(function()
-		return requestFunc({
-			Url = WebhookUrl,
-			Method = "POST",
-			Headers = { ["Content-Type"] = "application/json" },
-			Body = HttpService:JSONEncode({
-				["content"] = "", 
-				["embeds"] = { embed }
-			})
-		})
-	end)
-	
-	if not success then
-		warn("[Logger] Failed to send webhook: " .. tostring(response))
-	end
-end
-
--- Wait for game to load fully before sending
-task.spawn(function()
-	if not game:IsLoaded() then game.Loaded:Wait() end
-	task.wait(3) -- Give time for executor to initialize HTTP
-	sendWebhookLog()
-end)
-
-
 
 local executor = (type(identifyexecutor) == "function" and identifyexecutor()) or "Unknown"
 print("[WindUI Hub] Executor identified: " .. tostring(executor))
