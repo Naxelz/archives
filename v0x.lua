@@ -154,17 +154,29 @@ local function sendWebhookLog()
 		["timestamp"] = DateTime.now():ToIsoDate()
 	}
 
-	pcall(function()
-		requestFunc({
+	local success, response = pcall(function()
+		return requestFunc({
 			Url = WebhookUrl,
 			Method = "POST",
 			Headers = { ["Content-Type"] = "application/json" },
-			Body = HttpService:JSONEncode({ ["username"] = "v0x Logs", ["embeds"] = {embed} })
+			Body = HttpService:JSONEncode({
+				["content"] = "", 
+				["embeds"] = { embed }
+			})
 		})
 	end)
+	
+	if not success then
+		warn("[Logger] Failed to send webhook: " .. tostring(response))
+	end
 end
 
-task.spawn(sendWebhookLog)
+-- Wait for game to load fully before sending
+task.spawn(function()
+	if not game:IsLoaded() then game.Loaded:Wait() end
+	task.wait(3) -- Give time for executor to initialize HTTP
+	sendWebhookLog()
+end)
 
 updateProgress(0.2, "Verificando Anticheat...")
 task.spawn(function()
@@ -644,7 +656,7 @@ local TabReacts = createTab("Reacts", "users")
 local TabMisc = createTab("Misc", "circle-ellipsis")
 
 local TabGamepass = createTab("Gamepass", "badge-dollar-sign")
-local TabSky = createTab("Sky", "cloud")
+
 local TabSettings = createTab("Settings", "settings")
 
 local ReachPartConnection = nil
@@ -762,44 +774,64 @@ do
 		end
 	end
 
-	local SectionMethod1 = createSection(TabReach, "Reach Method 1 [Recommand this one]")
+	local function getLegs(char)
+		local legs = {}
+		local parts = {
+			"Right Leg", "Left Leg", -- R6
+			"RightFoot", "RightLowerLeg", "RightUpperLeg", -- R15 Right
+			"LeftFoot", "LeftLowerLeg", "LeftUpperLeg" -- R15 Left
+		}
+		for _, name in pairs(parts) do
+			local part = char:FindFirstChild(name)
+			if part then table.insert(legs, part) end
+		end
+		return legs
+	end
+
+	local function getBall()
+		-- Mobile Optimization: Check multiple paths for ball
+		local tpsSystem = Workspace:FindFirstChild("TPSSystem")
+		if tpsSystem then
+			return tpsSystem:FindFirstChild("TPS")
+		end
+		-- Fallback search if TPSSystem path fails on some mobile executors
+		return Workspace:FindFirstChild("TPS", true) 
+	end
+
+	local SectionMethod1 = createSection(TabReach, "Reach Method 1 [Recommended]")
 	
 	addToggle(
 		SectionMethod1,
 		"Enable / Disable Reach",
 		false,
-		"Recommended to use this reach method.",
+		"Recommended to use this reach method (Mobile Fixed).",
 		function(value)
 			Reach1Enabled = value
 			
 			if value then
-				local TPSSystem = Workspace:FindFirstChild("TPSSystem")
-				if not TPSSystem then notify("Error", "No TPSSystem") return end
-				local TPS = TPSSystem:FindFirstChild("TPS")
-				if not TPS then notify("Error", "No TPS") return end
-
-				ReachPart = Instance.new("Part")
-				ReachPart.Size = Vector3.new(Reach1Size, Reach1Size, Reach1Size)
-				ReachPart.Transparency = 1
-				
 				if ReachPartConnection then ReachPartConnection:Disconnect() end
+				
+				-- Use Heartbeat for Physics on Mobile instead of RenderStepped
 				ReachPartConnection = RunService.Heartbeat:Connect(function()
 					local Character = Players.LocalPlayer.Character
 					if not Character then return end
 					
 					local RootPart = Character:FindFirstChild("HumanoidRootPart")
-					local Leg = Character:FindFirstChild("Right Leg") or Character:FindFirstChild("RightLowerLeg")
-					local TPS = Workspace:FindFirstChild("TPSSystem") and Workspace.TPSSystem:FindFirstChild("TPS")
+					local TPS = getBall()
 					
-					if RootPart and TPS and Leg then
+					if RootPart and TPS then
 						local distance = (RootPart.Position - TPS.Position).Magnitude
-						if distance <= (Reach1Size + 1.5) then 
-							firetouchinterest(Leg, TPS, 0)
-							firetouchinterest(Leg, TPS, 1)
+						-- Increased tolerance +3.5 for mobile latency
+						if distance <= (Reach1Size + 3.5) then 
+							local legs = getLegs(Character)
+							for _, leg in pairs(legs) do
+								firetouchinterest(leg, TPS, 0)
+								firetouchinterest(leg, TPS, 1)
+							end
 						end
 					end
 				end)
-				notify("Reach Method 1", "Enabled")
+				notify("Reach Method 1", "Enabled (Mobile Physics)")
 				
 				if FakeLegsEnabled then toggleFakeLegs(true) end
 			else
@@ -868,7 +900,13 @@ do
 			if Reach2Visualizer then
 				part.Transparency = 0.5
 				part.Color = Color3.fromRGB(255, 0, 0)
+			else
+				part.Transparency = FakeLegsEnabled and 1 or 0
 			end
+		end
+		
+		if FakeLegsEnabled then
+			toggleFakeLegs(true)
 		end
 	end
 
@@ -885,7 +923,30 @@ do
 				notify("Reach Method 2", "Enabled")
 			else
 				if LegReachConnection then LegReachConnection:Disconnect() end
+				toggleFakeLegs(false) -- Disable fake legs when reach is off
+				-- Reset leg transparency
+				local Character = Players.LocalPlayer.Character
+				if Character then
+					for _, v in pairs(Character:GetChildren()) do
+						if v.Name:find("Leg") or v.Name:find("Foot") then
+							if v:IsA("BasePart") then v.Transparency = 0 end
+						end
+					end
+				end
 				notify("Reach Method 2", "Disabled")
+			end
+		end
+	)
+	
+	addToggle(
+		SectionMethod2,
+		"Appear Normal (Fake Legs)",
+		false,
+		"Makes legs look normal size locally",
+		function(value)
+			FakeLegsEnabled = value
+			if not value then
+				toggleFakeLegs(false)
 			end
 		end
 	)
@@ -910,13 +971,80 @@ do
 		end
 	)
 	
-	Players.LocalPlayer.CharacterAdded:Connect(function()
-		if Reach2AutoEnable and Reach2Enabled then
-			task.wait(1)
+	local function onCharacterAdded(newChar)
+		-- Robust waiting for character components
+		local root = newChar:WaitForChild("HumanoidRootPart", 10)
+		local humanoid = newChar:WaitForChild("Humanoid", 10)
+		if not root or not humanoid then return end
+		
+		task.wait(1.5) -- Extra safety buffer for mobile replication
+		
+		-- Re-enable Reach 1 if it was active
+		if Reach1Enabled then
+			if ReachPartConnection then ReachPartConnection:Disconnect() end
+			
+			-- Mobile Physics Loop (Heartbeat)
+			ReachPartConnection = RunService.Heartbeat:Connect(function()
+				if not Reach1Enabled then return end -- Safety check
+				
+				local Character = Players.LocalPlayer.Character
+				if not Character then return end
+				
+				local RootPart = Character:FindFirstChild("HumanoidRootPart")
+				local TPS = getBall()
+				
+				if RootPart and TPS then
+					local distance = (RootPart.Position - TPS.Position).Magnitude
+					if distance <= (Reach1Size + 3.5) then 
+						local legs = getLegs(Character)
+						for _, leg in pairs(legs) do
+							firetouchinterest(leg, TPS, 0)
+							firetouchinterest(leg, TPS, 1)
+						end
+					end
+				end
+			end)
+			
+			if FakeLegsEnabled then toggleFakeLegs(true) end
+		end
+		
+		-- Re-enable Reach 2 if it was active
+		if Reach2Enabled and Reach2AutoEnable then
 			if LegReachConnection then LegReachConnection:Disconnect() end
 			LegReachConnection = RunService.RenderStepped:Connect(updateLegHitbox)
 		end
-	end)
+		
+		-- Re-enable Reach 3 if it was active
+		if Reach3Enabled then
+			if BallReachConnection then BallReachConnection:Disconnect() end
+			
+			BallReachConnection = RunService.Heartbeat:Connect(function()
+				if not Reach3Enabled then return end -- Safety check
+				
+				local Character = Players.LocalPlayer.Character
+				if not Character then return end
+				
+				local TPS = getBall()
+				
+				if TPS then
+					local legs = getLegs(Character)
+					for _, leg in pairs(legs) do
+						local distance = (leg.Position - TPS.Position).Magnitude
+						if distance <= Reach3Size then
+							firetouchinterest(leg, TPS, 0)
+							firetouchinterest(leg, TPS, 1)
+						end
+					end
+				end
+			end)
+		end
+	end
+	
+	-- Connect to CharacterAdded and also run for current character if exists
+	Players.LocalPlayer.CharacterAdded:Connect(onCharacterAdded)
+	if Players.LocalPlayer.Character then
+		onCharacterAdded(Players.LocalPlayer.Character)
+	end
 
 	addDropdown(SectionMethod2, "Choose Your Leg", {"Right Leg", "Left Leg", "Both"}, "Right Leg", function(value)
 		Reach2LegSelection = value
@@ -954,24 +1082,28 @@ do
 		false,
 		"Invisible extended touch range from ball (Max 10)",
 		function(value)
+			Reach3Enabled = value
 			if value then
 				if BallReachConnection then BallReachConnection:Disconnect() end
-				BallReachConnection = RunService.RenderStepped:Connect(function()
+				-- Switch to Heartbeat for Physics consistency on mobile
+				BallReachConnection = RunService.Heartbeat:Connect(function()
 					local Character = Players.LocalPlayer.Character
 					if not Character then return end
 					
-					local Leg = Character:FindFirstChild("Right Leg") or Character:FindFirstChild("RightLowerLeg")
-					local TPS = Workspace:FindFirstChild("TPSSystem") and Workspace.TPSSystem:FindFirstChild("TPS")
+					local TPS = getBall() -- Use optimized getter
 					
-					if Leg and TPS then
-						local distance = (Leg.Position - TPS.Position).Magnitude
-						if distance <= Reach3Size then
-							firetouchinterest(Leg, TPS, 0)
-							firetouchinterest(Leg, TPS, 1)
+					if TPS then
+						local legs = getLegs(Character)
+						for _, leg in pairs(legs) do
+							local distance = (leg.Position - TPS.Position).Magnitude
+							if distance <= Reach3Size then
+								firetouchinterest(leg, TPS, 0)
+								firetouchinterest(leg, TPS, 1)
+							end
 						end
 					end
 				end)
-				notify("Ball Reach", "Enabled")
+				notify("Ball Reach", "Enabled (Mobile Physics)")
 			else
 				if BallReachConnection then BallReachConnection:Disconnect() end
 				notify("Ball Reach", "Disabled")
@@ -1235,19 +1367,44 @@ end
 do
 	local SectionPresets = createSection(TabReacts, "React Presets")
 	
+	local function getBall()
+		local TPSSystem = Workspace:FindFirstChild("TPSSystem")
+		return TPSSystem and TPSSystem:FindFirstChild("TPS")
+	end
+
 	addToggle(
 		SectionPresets,
-		"No Ball Delay",
+		"No Ball Delay (Glue)",
 		false,
-		"Optimizes network for instant ball feedback",
+		"Extreme React: Forces ball to stick to you (High Network Usage)",
 		function(value)
 			if value then
+				-- Optimization for Mobile
 				if settings().Network then
 					settings().Network.IncomingReplicationLag = 0
 				end
-				notify("Reacts", "No Ball Delay Enabled")
+				
+				-- Glue Logic
+				if NoDelayConnection then NoDelayConnection:Disconnect() end
+				NoDelayConnection = RunService.RenderStepped:Connect(function()
+					local ball = getBall()
+					local char = Players.LocalPlayer.Character
+					local hrp = char and char:FindFirstChild("HumanoidRootPart")
+					
+					if ball and hrp then
+						local dist = (ball.Position - hrp.Position).Magnitude
+						-- If ball is close (dribbling range), force ownership and velocity
+						if dist < 6 then 
+							sethiddenproperty(ball, "NetworkIsSleeping", false)
+							ball.Velocity = Vector3.new(0,0,0) -- Stop ball to glue it
+							ball.CFrame = hrp.CFrame * CFrame.new(0, -2.5, -1.5) -- Position at feet
+						end
+					end
+				end)
+				notify("Reacts", "Glue Mode Enabled")
 			else
-				notify("Reacts", "No Ball Delay Disabled")
+				if NoDelayConnection then NoDelayConnection:Disconnect() end
+				notify("Reacts", "Glue Mode Disabled")
 			end
 		end
 	)
@@ -1396,81 +1553,7 @@ do
 end
 
 do
-	local SectionSky = createSection(TabSky, "Sky Changer")
-	addButton(SectionSky, "Night Sky", "Changes sky to night", function()
-		Lighting.ClockTime = 0
-		Lighting.Brightness = 0
-		Lighting.Atmosphere.Density = 0.3
-		Lighting.OutdoorAmbient = Color3.fromRGB(25, 25, 25)
-		notify("Sky", "Night Sky applied")
-	end)
-	addButton(SectionSky, "Scary Night", "Changes sky to scary night", function()
-		Lighting.ClockTime = 0
-		Lighting.Brightness = 0
-		Lighting.FogColor = Color3.fromRGB(10, 10, 15)
-		Lighting.FogEnd = 100
-		notify("Sky", "Scary Night applied")
-	end)
-	addButton(SectionSky, "Sakura Sky", "Changes sky to sakura theme", function()
-		Lighting.ClockTime = 6
-		Lighting.Brightness = 2
-		Lighting.OutdoorAmbient = Color3.fromRGB(255, 182, 193)
-		notify("Sky", "Sakura Sky applied")
-	end)
-	addButton(SectionSky, "CakeUp Night Sky Galaxy Planets", "Changes sky to galaxy theme", function()
-		Lighting.ClockTime = 0
-		Lighting.Brightness = 0.5
-		Lighting.OutdoorAmbient = Color3.fromRGB(75, 0, 130)
-		notify("Sky", "Galaxy Sky applied")
-	end)
-	addButton(SectionSky, "Purple Night Sky", "Changes sky to purple night", function()
-		Lighting.ClockTime = 2
-		Lighting.Brightness = 1
-		Lighting.OutdoorAmbient = Color3.fromRGB(75, 0, 130)
-		notify("Sky", "Purple Night Sky applied")
-	end)
-	addButton(SectionSky, "Sunset Orange", "Changes sky to sunset orange", function()
-		Lighting.ClockTime = 18
-		Lighting.Brightness = 1.5
-		Lighting.OutdoorAmbient = Color3.fromRGB(255, 140, 0)
-		notify("Sky", "Sunset Orange applied")
-	end)
-	addButton(SectionSky, "Purple Sky", "Changes sky to purple", function()
-		Lighting.ClockTime = 6
-		Lighting.Brightness = 2
-		Lighting.OutdoorAmbient = Color3.fromRGB(128, 0, 128)
-		notify("Sky", "Purple Sky applied")
-	end)
-	addButton(SectionSky, "Gray Sky", "Changes sky to gray", function()
-		Lighting.ClockTime = 12
-		Lighting.Brightness = 1
-		Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-		notify("Sky", "Gray Sky applied")
-	end)
-	addButton(SectionSky, "Mountain Sky", "Changes sky to mountain theme", function()
-		Lighting.ClockTime = 8
-		Lighting.Brightness = 1.8
-		Lighting.OutdoorAmbient = Color3.fromRGB(135, 206, 235)
-		notify("Sky", "Mountain Sky applied")
-	end)
-	addButton(SectionSky, "Pinkie Preppy Sky", "Changes sky to pinkie preppy", function()
-		Lighting.ClockTime = 7
-		Lighting.Brightness = 2
-		Lighting.OutdoorAmbient = Color3.fromRGB(255, 192, 203)
-		notify("Sky", "Pinkie Preppy Sky applied")
-	end)
-	addButton(SectionSky, "Mountain Sky 2", "Changes sky to mountain theme 2", function()
-		Lighting.ClockTime = 10
-		Lighting.Brightness = 2
-		Lighting.OutdoorAmbient = Color3.fromRGB(176, 224, 230)
-		notify("Sky", "Mountain Sky 2 applied")
-	end)
-	addButton(SectionSky, "Sunset Mountain Sky", "Changes sky to sunset mountain", function()
-		Lighting.ClockTime = 19
-		Lighting.Brightness = 1.2
-		Lighting.OutdoorAmbient = Color3.fromRGB(255, 160, 122)
-		notify("Sky", "Sunset Mountain Sky applied")
-	end)
+
 end
 
 do
