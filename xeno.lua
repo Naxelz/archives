@@ -51,6 +51,74 @@ local _Actions52 = workspace.FE.Actions
 _Actions52:FindFirstChild('KeepYourHeadUp_')
 _Actions52.KeepYourHeadUp_:Destroy()
 
+local function applyBypass()
+    local bypassSuccess = false
+    
+    -- 1. Aggressive Remote Destruction
+    pcall(function()
+        local Actions = workspace:FindFirstChild("FE") and workspace.FE:FindFirstChild("Actions")
+        if Actions then
+            local RealKYHU = Actions:FindFirstChild("KeepYourHeadUp")
+            if RealKYHU then
+                RealKYHU:Destroy()
+            end
+            
+            -- Replace with Dummy Remote
+            local FakeKYHU = Instance.new("RemoteEvent")
+            FakeKYHU.Name = "KeepYourHeadUp"
+            FakeKYHU.Parent = Actions
+        end
+    end)
+
+    -- 2. Aggressive Error Disabling (Prevents Reporting)
+    pcall(function()
+        local ScriptContext = game:GetService("ScriptContext")
+        if ScriptContext and getconnections then
+            for _, v in pairs(getconnections(ScriptContext.Error)) do
+                v:Disable()
+            end
+        end
+    end)
+
+    -- 3. Generic Remote Protection
+    pcall(function()
+        if hookmetamethod and getnamecallmethod and checkcaller then
+            local oldNamecall
+            oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+                local method = getnamecallmethod()
+                local args = {...}
+                
+                -- Block ANY Kick attempt on LocalPlayer
+                if (method == "Kick" or method == "kick") and self == game.Players.LocalPlayer then
+                    return
+                end
+                
+                -- Block suspicious remotes
+                if method == "FireServer" and not checkcaller() then
+                    local name = self.Name
+                    local lowerName = name:lower()
+                    
+                    if lowerName:find("xp") or lowerName:find("reward") then
+                        if #args > 0 and type(args[1]) == "table" then
+                            return 
+                        end
+                    end
+
+                    if name == "Ban" or name == "AdminGUI" or name == "Report" or lowerName:find("log") or lowerName:find("cheat") or lowerName:find("detected") then
+                        return
+                    end
+                end
+                
+                return oldNamecall(self, ...)
+            end)
+        end
+    end)
+    
+    return true
+end
+
+applyBypass()
+
 local _call59 = Instance.new('RemoteEvent')
 
 _call59.Name = 'KeepYourHeadUp_'
@@ -444,162 +512,15 @@ _call280:Section({
 _call280:Button({
     Callback = function(_416, _416_2, _416_3)
         local _callgetrawmetatable417 = getrawmetatable(game)
-        local __namecall418 = _callgetrawmetatable417.__namecall
-
-        setreadonly(_callgetrawmetatable417, false)
-        newcclosure(function(...)
-            getnamecallmethod()
-
-            local _call422 = __namecall418(...)
-
-            return _call422
-        end)
-
-        _callgetrawmetatable417.__namecall = function(...)
-            getnamecallmethod()
-
-            local _call425 = __namecall418(...)
-
-            return _call425
-        end
-
-        setreadonly(_callgetrawmetatable417, true)
-
-        local _callgetrawmetatable427 = getrawmetatable(game)
-        local __namecall428 = _callgetrawmetatable427.__namecall
-
-        setreadonly(_callgetrawmetatable427, false)
-        newcclosure(function(...)
-            getnamecallmethod()
-
-            local _call432 = __namecall428(...)
-
-            return _call432
-        end)
-
-        _callgetrawmetatable427.__namecall = function(...)
-            getnamecallmethod()
-
-            local _call435 = __namecall428(...)
-
-            return _call435
-        end
-
-        setreadonly(_callgetrawmetatable427, true)
-
-        local _callgetrawmetatable437 = getrawmetatable(game)
-        local __namecall438 = _callgetrawmetatable437.__namecall
-
-        setreadonly(_callgetrawmetatable437, false)
-        newcclosure(function(...)
-            getnamecallmethod()
-
-            local _call442 = __namecall438(...)
-
-            return _call442
-        end)
-
-        _callgetrawmetatable437.__namecall = function(...)
-            getnamecallmethod()
-
-            local _call445 = __namecall438(...)
-
-            return _call445
-        end
-
-        setreadonly(_callgetrawmetatable437, true)
-
-        local _callgetrawmetatable447 = getrawmetatable(game)
-        local __namecall448 = _callgetrawmetatable447.__namecall
-
-        setreadonly(_callgetrawmetatable447, false)
-        newcclosure(function(...)
-            getnamecallmethod()
-
-            local _call452 = __namecall448(...)
-
-            return _call452
-        end)
-
-        _callgetrawmetatable447.__namecall = function(...)
-            getnamecallmethod()
-
-            local _call455 = __namecall448(...)
-
-            return _call455
-        end
-
-        setreadonly(_callgetrawmetatable447, true)
-
-        local _callgetrawmetatable457 = getrawmetatable(game)
-        local __namecall458 = _callgetrawmetatable457.__namecall
-
-        setreadonly(_callgetrawmetatable457, false)
-        newcclosure(function(...)
-            getnamecallmethod()
-
-            local _call462 = __namecall458(...)
-
-            return _call462
-        end)
-
-        _callgetrawmetatable457.__namecall = function(...)
-            getnamecallmethod()
-
-            local _call465 = __namecall458(...)
-
-            return _call465
-        end
-
-        setreadonly(_callgetrawmetatable457, true)
-
-        local _callgetrawmetatable467 = getrawmetatable(game)
-        local __namecall468 = _callgetrawmetatable467.__namecall
-
-        setreadonly(_callgetrawmetatable467, false)
-        newcclosure(function(...)
-            getnamecallmethod()
-
-            local _call472 = __namecall468(...)
-
-            return _call472
-        end)
-
-        _callgetrawmetatable467.__namecall = function(...)
-            getnamecallmethod()
-
-            local _call475 = __namecall468(...)
-
-            return _call475
-        end
-
-        setreadonly(_callgetrawmetatable467, true)
-
-        local _callgetrawmetatable477 = getrawmetatable(game)
-        local __namecall478 = _callgetrawmetatable477.__namecall
-
-        setreadonly(_callgetrawmetatable477, false)
-        newcclosure(function(...)
-            getnamecallmethod()
-
-            local _call482 = __namecall478(...)
-
-            return _call482
-        end)
-
-        _callgetrawmetatable477.__namecall = function(...)
-            getnamecallmethod()
-
-            local _call485 = __namecall478(...)
-
-            return _call485
-        end
-
-        setreadonly(_callgetrawmetatable477, true)
+        
+        -- Better Bypass (From v0x) applied globally. 
+        -- This button now just reinforces it.
+        applyBypass()
+        
         _call69:Notify({
             Time = 3,
             Title = 'Goalkeeper React',
-            Desc = 'React enabled successfully',
+            Desc = 'Bypass & React refreshed successfully',
         })
     end,
     Title = 'Goalkeeper React',
