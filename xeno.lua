@@ -3,7 +3,7 @@
 
 task.wait(0.5)
 
--- // SERVICES //
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
@@ -14,9 +14,9 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- // SAFE BYPASS SYSTEM (Solara Optimized) //
+
 local function applySafeBypass()
-    -- 1. Remote Protection (Anti-Report)
+
     pcall(function()
         local Actions = Workspace:FindFirstChild("FE") and Workspace.FE:FindFirstChild("Actions")
         if Actions then
@@ -30,12 +30,12 @@ local function applySafeBypass()
         end
     end)
 
-    -- 2. Error Suppression
+ 
     pcall(function()
         game:GetService("ScriptContext").Error:Connect(function() end)
     end)
     
-    -- 3. Low-Level Hooking (If supported)
+  
     if hookmetamethod and getnamecallmethod and checkcaller then
         pcall(function()
             local old
@@ -54,7 +54,7 @@ end
 
 applySafeBypass()
 
--- // UTILS //
+
 local function getBall()
     local tps = Workspace:FindFirstChild("TPSSystem")
     return tps and tps:FindFirstChild("TPS")
@@ -68,7 +68,7 @@ local function getLeg(char, side)
     end
 end
 
--- // CONFIGS //
+
 _G.ReachEnabled = false
 _G.ReachSize = 10
 _G.ActiveLeg = "Right"
@@ -76,7 +76,7 @@ _G.ActiveLeg = "Right"
 _G.ReactEnabled = false
 _G.ReactRange = 15
 _G.ReactPower = 100
-_G.ReactType = "Normal" -- Normal, Better, Alz, Foxtede
+_G.ReactType = "Normal" 
 
 _G.MossEnabled = false
 _G.MossSize = Vector3.new(5,5,5)
@@ -84,7 +84,7 @@ _G.MossSize = Vector3.new(5,5,5)
 _G.BallPredEnabled = false
 _G.BallPredBeam = nil
 
--- // LOGIC LOOPS //
+
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     local ball = getBall()
@@ -92,19 +92,23 @@ RunService.Heartbeat:Connect(function()
     if char and ball then
         local root = char:FindFirstChild("HumanoidRootPart")
         
-        -- REACH LOGIC
+       
         if _G.ReachEnabled and root then
             local dist = (root.Position - ball.Position).Magnitude
             if dist <= _G.ReachSize then
-                local leg = getLeg(char, _G.ActiveLeg)
-                if leg then
-                    firetouchinterest(leg, ball, 0)
-                    firetouchinterest(leg, ball, 1)
+               
+                if not _G.ReachCooldown or (tick() - _G.ReachCooldown) > 0.05 then
+                    local leg = getLeg(char, _G.ActiveLeg)
+                    if leg then
+                        firetouchinterest(leg, ball, 0)
+                        firetouchinterest(leg, ball, 1)
+                        _G.ReachCooldown = tick()
+                    end
                 end
             end
         end
         
-        -- REACT LOGIC
+       
         if _G.ReactEnabled and root then
             local dist = (root.Position - ball.Position).Magnitude
             if dist <= _G.ReactRange then
@@ -130,10 +134,10 @@ RunService.Heartbeat:Connect(function()
             end
         end
         
-        -- BALL PREDICTION
+      
         if _G.BallPredEnabled then
             if not _G.BallPredBeam then
-                -- Setup Beam
+               
                 local att1 = Instance.new("Attachment", Workspace.Terrain)
                 local att2 = Instance.new("Attachment", Workspace.Terrain)
                 local beam = Instance.new("Beam", Workspace.Terrain)
@@ -158,7 +162,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- // UI SETUP (Vernum Lib Original) //
+
 local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/Twistzzmassivescripts/UI_Libarys/refs/heads/main/MY%20OWN%20LIBARYS/Vernum%20Gui%20Libary'))()
 local Window = Library:Window({
     Config = {
