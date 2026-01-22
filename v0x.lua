@@ -137,12 +137,14 @@ task.spawn(function()
     end
 end)
 
+local killCharacterAfterLoader = false
+
 task.delay(5, function()
     TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
     task.wait(0.6)
     gui:Destroy()
     task.wait(1)
-    if player.Character then
+    if killCharacterAfterLoader and player.Character then
         player.Character:BreakJoints()
     end
 
@@ -159,26 +161,38 @@ task.delay(5, function()
     local counterFileAlt = "nyx.txt"
 
     local function tryReadNumber(path)
-        if not readfile then return nil end
-        local ok, content = pcall(readfile, path)
+        local readfileFunc = getfenv().readfile or nil
+        if not readfileFunc or type(readfileFunc) ~= "function" then return nil end
+        local ok, content = pcall(readfileFunc, path)
         if not ok then return nil end
         return tonumber(content)
     end
 
-    if isfile then
-        if isfile(counterFile) then
+    local isfileFunc = getfenv().isfile or nil
+    if isfileFunc and type(isfileFunc) == "function" then
+        if isfileFunc(counterFile) then
             local n = tryReadNumber(counterFile)
             if n then execCount = n + 1 end
-        elseif isfile(counterFileAlt) then
+        elseif isfileFunc(counterFileAlt) then
             local n = tryReadNumber(counterFileAlt)
             if n then execCount = n + 1 end
         end
     end
-    if writefile then
-        writefile(counterFile, tostring(execCount))
+    local writefileFunc = getfenv().writefile or nil
+    if writefileFunc and type(writefileFunc) == "function" then
+        pcall(function()
+            writefileFunc(counterFile, tostring(execCount))
+        end)
     end
 
-    local executorName = identifyexecutor and identifyexecutor() or "Unknown"
+    local executorName = "Unknown"
+    local identifyExecutorFunc = getfenv().identifyexecutor or getfenv().getexecutor or nil
+    if identifyExecutorFunc and type(identifyExecutorFunc) == "function" then
+        local success, result = pcall(identifyExecutorFunc)
+        if success and result then
+            executorName = result
+        end
+    end
     local lowerName = string.lower(executorName)
     local isSolara = string.find(lowerName, "solara") ~= nil
     local isXeno = string.find(lowerName, "xeno") ~= nil
@@ -203,9 +217,21 @@ task.delay(5, function()
     UI.Name = "KyroMPS"
     UI.ResetOnSpawn = false
     UI.IgnoreGuiInset = true
-    UI.Parent = CoreGui
+    
+    local success, err = pcall(function()
+        UI.Parent = CoreGui
+    end)
+    if not success then
+        local PlayerGui = player:FindFirstChild("PlayerGui")
+        if PlayerGui then
+            UI.Parent = PlayerGui
+        else
+            warn("NYX: Could not parent UI to CoreGui or PlayerGui")
+            return
+        end
+    end
 
-    local isMobile = UIS.TouchEnabled
+    local isMobile = UIS.TouchEnabled or false
 
     local function computeMainSize()
         local cam = Workspace.CurrentCamera
@@ -283,10 +309,12 @@ task.delay(5, function()
     mainStroke.Transparency = 0.7
 
     if isMobile and Workspace.CurrentCamera then
-        Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-            mainSize = computeMainSize()
-            Main.Size = mainSize
-            Main.Position = UDim2.fromScale(0.5, 0.5)
+        pcall(function()
+            Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+                mainSize = computeMainSize()
+                Main.Size = mainSize
+                Main.Position = UDim2.fromScale(0.5, 0.5)
+            end)
         end)
     end
 
@@ -437,9 +465,9 @@ task.delay(5, function()
         end
     end
 
-    Minimize.MouseButton1Click:Connect(function() SetMinimized(not minimized) end)
-    FloatButton.MouseButton1Click:Connect(function() SetMinimized(false) end)
-    Close.MouseButton1Click:Connect(function() UI:Destroy() end)
+    Minimize.Activated:Connect(function() SetMinimized(not minimized) end)
+    FloatButton.Activated:Connect(function() SetMinimized(false) end)
+    Close.Activated:Connect(function() UI:Destroy() end)
 
     UIS.InputBegan:Connect(function(i)
         if i.KeyCode == Enum.KeyCode.RightShift then
@@ -546,7 +574,7 @@ task.delay(5, function()
             TS:Create(btn, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(200,200,220), Position = UDim2.new(0,tabButtonX,btn.Position.Y.Scale,btn.Position.Y.Offset)}):Play()
         end)
 
-        btn.MouseButton1Click:Connect(function()
+        btn.Activated:Connect(function()
             if CurrentContainer then CurrentContainer.Visible = false end
             for _, b in ipairs(TabButtons) do
                 b.TextColor3 = Color3.fromRGB(200,200,220)
@@ -602,7 +630,9 @@ task.delay(5, function()
     Avatar.Size = UDim2.new(0,50,0,50)
     Avatar.Position = UDim2.new(0,16,0,16)
     Avatar.BackgroundTransparency = 1
-    Avatar.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+    pcall(function()
+        Avatar.Image = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size420x420)
+    end)
     Avatar.Parent = HomeTab
     Instance.new("UICorner", Avatar).CornerRadius = UDim.new(1,0)
 
@@ -843,10 +873,11 @@ task.delay(5, function()
         btn.Font = Enum.Font.GothamSemibold
         btn.TextSize = isMobile and 14 or 13
         btn.TextWrapped = true
+        btn.Active = true
         btn.Parent = frame
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
-        btn.MouseButton1Click:Connect(onClick)
+        btn.Activated:Connect(onClick)
         return btn
     end
 
@@ -871,7 +902,7 @@ task.delay(5, function()
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
         local isBinding = false
-        btn.MouseButton1Click:Connect(function()
+        btn.Activated:Connect(function()
             if isBinding then return end
             isBinding = true
             btn.Text = "Press any key..."
@@ -976,7 +1007,12 @@ task.delay(5, function()
     local reactBetterYBoost = 0.35
     local reactImpulse = true
 
-    local fireTouchFunc = (type(firetouchinterest) == "function") and firetouchinterest or nil
+    local fireTouchFunc = nil
+    pcall(function()
+        if type(firetouchinterest) == "function" then
+            fireTouchFunc = firetouchinterest
+        end
+    end)
     local fireTouchSwap = false
 
     local function fireTouch(a, b, state)
@@ -1211,7 +1247,7 @@ task.delay(5, function()
             end
         end)
 
-        applyBtn.MouseButton1Click:Connect(function()
+        applyBtn.Activated:Connect(function()
             local username = inputBox.Text:gsub("^%s*(.-)%s*$", "%1")
             if username ~= "" and player.Character then
                 ApplyAvatarSteal(player.Character, username)
@@ -1997,7 +2033,7 @@ task.delay(5, function()
             resetBtn.TextSize = 15
             resetBtn.Parent = SolaraLegTab
             Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0,8)
-            resetBtn.MouseButton1Click:Connect(function()
+            resetBtn.Activated:Connect(function()
                 resetSolaraChanges()
                 if solaraEnabled then applySolaraChanges() end
             end)
