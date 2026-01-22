@@ -277,18 +277,25 @@ task.delay(5, function()
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local dragStart = input.Position
             local startPos = FloatButton.Position
+            local hasMoved = false
             local moveConn
             local endConn
             moveConn = UIS.InputChanged:Connect(function(inp)
                 if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
                     local delta = inp.Position - dragStart
-                    FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                    if delta.Magnitude > 5 then
+                        hasMoved = true
+                        FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                    end
                 end
             end)
             endConn = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     moveConn:Disconnect()
                     endConn:Disconnect()
+                    if not hasMoved then
+                        SetMinimized(false)
+                    end
                 end
             end)
         end
@@ -467,7 +474,6 @@ task.delay(5, function()
         end
     end
 
-    Minimize.Activated:Connect(function() SetMinimized(not minimized) end)
     Minimize.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             local endConn
@@ -479,7 +485,6 @@ task.delay(5, function()
             end)
         end
     end)
-    FloatButton.Activated:Connect(function() SetMinimized(false) end)
     Close.Activated:Connect(function() UI:Destroy() end)
 
     UIS.InputBegan:Connect(function(i)
