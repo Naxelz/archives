@@ -275,9 +275,11 @@ task.delay(5, function()
 
     local isDraggingFloat = false
     local dragStart, startPos
+    local floatInput = nil
 
     FloatButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            floatInput = input
             dragStart = input.Position
             startPos = FloatButton.Position
             isDraggingFloat = false
@@ -287,7 +289,7 @@ task.delay(5, function()
     FloatButton.InputChanged:Connect(function(input)
         if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStart then
             local delta = input.Position - dragStart
-            if delta.Magnitude > 5 then
+            if delta.Magnitude > 10 then
                 isDraggingFloat = true
                 FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             end
@@ -295,12 +297,13 @@ task.delay(5, function()
     end)
 
     FloatButton.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if input == floatInput and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
             if not isDraggingFloat then
                 SetMinimized(false)
             end
             dragStart = nil
             startPos = nil
+            floatInput = nil
             isDraggingFloat = false
         end
     end)
