@@ -372,6 +372,7 @@ task.delay(5, function()
     Minimize.TextColor3 = Color3.fromRGB(200,200,200)
     Minimize.Font = Enum.Font.GothamBold
     Minimize.TextSize = isMobile and 30 or 26
+    Minimize.Active = true
     Minimize.Parent = Main
 
     local Close = Instance.new("TextButton")
@@ -467,6 +468,17 @@ task.delay(5, function()
     end
 
     Minimize.Activated:Connect(function() SetMinimized(not minimized) end)
+    Minimize.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local endConn
+            endConn = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    SetMinimized(not minimized)
+                    if endConn then endConn:Disconnect() end
+                end
+            end)
+        end
+    end)
     FloatButton.Activated:Connect(function() SetMinimized(false) end)
     Close.Activated:Connect(function() UI:Destroy() end)
 
@@ -1864,7 +1876,6 @@ task.delay(5, function()
 
                     if legOn and #legs > 0 then
                         if reachSmart then
-                            local best, bestD = nil, math.huge
                             for _, l in ipairs(legs) do
                                 local delta = pos - l.Position
                                 local insideAABB = aabbInside(delta, legX, legY, legZ)
@@ -1873,16 +1884,10 @@ task.delay(5, function()
                                     hitByRay = checkRaycastCollision(ball, l, legX, legY, legZ)
                                 end
                                 if insideAABB or hitByRay then
-                                    local d = delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z
-                                    if d < bestD then
-                                        bestD = d
-                                        best = l
-                                    end
+                                    touchBurst(ball, l, legBurst)
+                                    touchedParts += 1
+                                    if touchedParts >= reachMaxPartsPerBall then break end
                                 end
-                            end
-                            if best then
-                                touchBurst(ball, best, legBurst)
-                                touchedParts += 1
                             end
                         else
                             for _, l in ipairs(legs) do
@@ -1903,7 +1908,6 @@ task.delay(5, function()
 
                     if armOn and #arms > 0 and touchedParts < reachMaxPartsPerBall then
                         if reachSmart then
-                            local best, bestD = nil, math.huge
                             for _, a in ipairs(arms) do
                                 local delta = pos - a.Position
                                 local insideAABB = aabbInside(delta, armX, armY, armZ)
@@ -1912,16 +1916,10 @@ task.delay(5, function()
                                     hitByRay = checkRaycastCollision(ball, a, armX, armY, armZ)
                                 end
                                 if insideAABB or hitByRay then
-                                    local d = delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z
-                                    if d < bestD then
-                                        bestD = d
-                                        best = a
-                                    end
+                                    touchBurst(ball, a, armBurst)
+                                    touchedParts += 1
+                                    if touchedParts >= reachMaxPartsPerBall then break end
                                 end
-                            end
-                            if best then
-                                touchBurst(ball, best, armBurst)
-                                touchedParts += 1
                             end
                         else
                             for _, a in ipairs(arms) do
