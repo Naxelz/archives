@@ -642,6 +642,7 @@ task.delay(5, function()
     local ReactTab = nil
     local PlayerTab = nil
     local HeadTab = nil
+    local R15ReachTab = nil
 
     if isTPSLike and isSupportedExecutor then
         SolaraLegTab = AddTab("R6 Leg Reach")
@@ -655,6 +656,8 @@ task.delay(5, function()
         if isTPSLike then ReactTab = AddTab("React") end
         PlayerTab = AddTab("Player")
     end
+
+    R15ReachTab = AddTab("R15 Reach")
 
     TabButtons[1].TextColor3 = Color3.fromRGB(200,200,220)
     if TabButtons[1]:FindFirstChildOfClass("UIStroke") then
@@ -1051,6 +1054,13 @@ task.delay(5, function()
 
     local reactBetterSpeed = 2000
     local reactOpSpeed = 2800
+    local reactImproveSpeed = 3500
+    local reactAlzSpeed = 4000
+    local reactAbzSpeed = 4200
+    local reactSkinnySpeed = 3800
+    local reactWazySpeed = 4500
+    local reactAeronossSpeed = 5000
+    local reactSuperKBSpeed = 6000
     local reactBetterYBoost = 0.5
     local reactImpulse = true
 
@@ -1245,6 +1255,13 @@ task.delay(5, function()
     local noBallDelayOn = false
     local betterReactOn = false
     local opReactOn = false
+    local improveReactOn = false
+    local reactAlzOn = false
+    local reactAbzOn = false
+    local reactSkinnyOn = false
+    local reactWazyOn = false
+    local reactAeronossOn = false
+    local reactSuperKBOn = false
     local attackerReactOn = false
     local midfielderReactOn = false
     local defenderReactOn = false
@@ -1579,18 +1596,215 @@ task.delay(5, function()
 
         local BetterReactToggle
         local OPReactToggle
+        local ImproveReactToggle
         BetterReactToggle = CreateToggle(ReactTab, "Better React", function(on)
             betterReactOn = on
             opReactOn = false
+            improveReactOn = false
             if on and OPReactToggle then
                 OPReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
             end
         end)
         OPReactToggle = CreateToggle(ReactTab, "OP React", function(on)
             opReactOn = on
             betterReactOn = false
+            improveReactOn = false
             if on and BetterReactToggle then
                 BetterReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
+            end
+        end)
+        ImproveReactToggle = CreateToggle(ReactTab, "Improve React", function(on)
+            improveReactOn = on
+            betterReactOn = false
+            opReactOn = false
+            reactAlzOn = false
+            reactAbzOn = false
+            reactSkinnyOn = false
+            reactWazyOn = false
+            reactAeronossOn = false
+            reactSuperKBOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
+        end)
+
+        local ReactAlzToggle = CreateToggle(ReactTab, "React Alz", function(on)
+            reactAlzOn = on
+            betterReactOn = false
+            opReactOn = false
+            improveReactOn = false
+            reactAbzOn = false
+            reactSkinnyOn = false
+            reactWazyOn = false
+            reactAeronossOn = false
+            reactSuperKBOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
+            end
+        end)
+
+        local ReactAbzToggle = CreateToggle(ReactTab, "React Abz", function(on)
+            reactAbzOn = on
+            betterReactOn = false
+            opReactOn = false
+            improveReactOn = false
+            reactAlzOn = false
+            reactSkinnyOn = false
+            reactWazyOn = false
+            reactAeronossOn = false
+            reactSuperKBOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
+            end
+            if on and ReactAlzToggle then
+                ReactAlzToggle:Set(false, false)
+            end
+        end)
+
+        local ReactSkinnyToggle = CreateToggle(ReactTab, "React Skinny", function(on)
+            reactSkinnyOn = on
+            betterReactOn = false
+            opReactOn = false
+            improveReactOn = false
+            reactAlzOn = false
+            reactAbzOn = false
+            reactWazyOn = false
+            reactAeronossOn = false
+            reactSuperKBOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
+            end
+            if on and ReactAlzToggle then
+                ReactAlzToggle:Set(false, false)
+            end
+            if on and ReactAbzToggle then
+                ReactAbzToggle:Set(false, false)
+            end
+        end)
+
+        local ReactWazyToggle = CreateToggle(ReactTab, "React Wazy", function(on)
+            reactWazyOn = on
+            betterReactOn = false
+            opReactOn = false
+            improveReactOn = false
+            reactAlzOn = false
+            reactAbzOn = false
+            reactSkinnyOn = false
+            reactAeronossOn = false
+            reactSuperKBOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
+            end
+            if on and ReactAlzToggle then
+                ReactAlzToggle:Set(false, false)
+            end
+            if on and ReactAbzToggle then
+                ReactAbzToggle:Set(false, false)
+            end
+            if on and ReactSkinnyToggle then
+                ReactSkinnyToggle:Set(false, false)
+            end
+        end)
+
+        local ReactAeronossToggle = CreateToggle(ReactTab, "React Aeronoss", function(on)
+            reactAeronossOn = on
+            betterReactOn = false
+            opReactOn = false
+            improveReactOn = false
+            reactAlzOn = false
+            reactAbzOn = false
+            reactSkinnyOn = false
+            reactWazyOn = false
+            reactSuperKBOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
+            end
+            if on and ReactAlzToggle then
+                ReactAlzToggle:Set(false, false)
+            end
+            if on and ReactAbzToggle then
+                ReactAbzToggle:Set(false, false)
+            end
+            if on and ReactSkinnyToggle then
+                ReactSkinnyToggle:Set(false, false)
+            end
+            if on and ReactWazyToggle then
+                ReactWazyToggle:Set(false, false)
+            end
+        end)
+
+        local ReactSuperKBToggle = CreateToggle(ReactTab, "Super KB React", function(on)
+            reactSuperKBOn = on
+            betterReactOn = false
+            opReactOn = false
+            improveReactOn = false
+            reactAlzOn = false
+            reactAbzOn = false
+            reactSkinnyOn = false
+            reactWazyOn = false
+            reactAeronossOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
+            if on and ImproveReactToggle then
+                ImproveReactToggle:Set(false, false)
+            end
+            if on and ReactAlzToggle then
+                ReactAlzToggle:Set(false, false)
+            end
+            if on and ReactAbzToggle then
+                ReactAbzToggle:Set(false, false)
+            end
+            if on and ReactSkinnyToggle then
+                ReactSkinnyToggle:Set(false, false)
+            end
+            if on and ReactWazyToggle then
+                ReactWazyToggle:Set(false, false)
+            end
+            if on and ReactAeronossToggle then
+                ReactAeronossToggle:Set(false, false)
             end
         end)
 
@@ -1827,14 +2041,36 @@ task.delay(5, function()
             end
         end
 
-        if reactBall and (betterReactOn or opReactOn) then
+        if reactBall and (betterReactOn or opReactOn or improveReactOn or reactAlzOn or reactAbzOn or reactSkinnyOn or reactWazyOn or reactAeronossOn or reactSuperKBOn) then
             local nowReact = os.clock()
             if (nowReact - lastReactUpdate) >= reactUpdateInterval then
                 lastReactUpdate = nowReact
 
                 local curVel = getAssemblyVelocity(reactBall)
 
-                local baseSpeed = betterReactOn and reactBetterSpeed or reactOpSpeed
+                local baseSpeed
+                if betterReactOn then
+                    baseSpeed = reactBetterSpeed
+                elseif opReactOn then
+                    baseSpeed = reactOpSpeed
+                elseif improveReactOn then
+                    baseSpeed = reactImproveSpeed
+                elseif reactAlzOn then
+                    baseSpeed = reactAlzSpeed
+                elseif reactAbzOn then
+                    baseSpeed = reactAbzSpeed
+                elseif reactSkinnyOn then
+                    baseSpeed = reactSkinnySpeed
+                elseif reactWazyOn then
+                    baseSpeed = reactWazySpeed
+                elseif reactAeronossOn then
+                    baseSpeed = reactAeronossSpeed
+                elseif reactSuperKBOn then
+                    baseSpeed = reactSuperKBSpeed
+                else
+                    baseSpeed = reactBetterSpeed
+                end
+
                 local speed = baseSpeed
                 local dir
                 if curVel.Magnitude > 4 then
@@ -1845,7 +2081,7 @@ task.delay(5, function()
                     dir = Vector3.new(1, 0, 0)
                 end
 
-                local yBoost = betterReactOn and (reactBetterYBoost * speed) or 0
+                local yBoost = (betterReactOn or improveReactOn) and (reactBetterYBoost * speed) or 0
                 local desiredVel = dir * speed + Vector3.new(0, yBoost, 0)
                 applyReactVelocity(reactBall, desiredVel)
             end
@@ -2061,6 +2297,15 @@ task.delay(5, function()
     local originalHeadSize = nil
     local headVisSolara = nil
 
+    local r15ReachEnabled = false
+    local r15HeadReachX, r15HeadReachY, r15HeadReachZ = 2, 2, 2
+    local r15LeftArmReachX, r15LeftArmReachY, r15LeftArmReachZ = 1.5, 3, 1.5
+    local r15RightArmReachX, r15RightArmReachY, r15RightArmReachZ = 1.5, 3, 1.5
+    local r15LeftLegReachX, r15LeftLegReachY, r15LeftLegReachZ = 1.5, 4, 1.5
+    local r15RightLegReachX, r15RightLegReachY, r15RightLegReachZ = 1.5, 4, 1.5
+    local r15OriginalSizes = {}
+    local r15VisHead, r15VisLeftArm, r15VisRightArm, r15VisLeftLeg, r15VisRightLeg = nil, nil, nil, nil, nil
+
     local function makeVisualizer(color)
         local p = Instance.new("Part")
         p.Anchored = true
@@ -2166,6 +2411,100 @@ task.delay(5, function()
         originalHeadSize = nil
     end
 
+    local function applyR15Changes()
+        local char = player.Character
+        if not char or char:FindFirstChildOfClass("Humanoid").RigType ~= Enum.HumanoidRigType.R15 then return end
+
+        local head = char:FindFirstChild("Head")
+        local leftArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm")
+        local rightArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("Right Arm")
+        local leftLeg = char:FindFirstChild("LeftUpperLeg") or char:FindFirstChild("Left Leg")
+        local rightLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("Right Leg")
+
+        if not r15ReachEnabled then return end
+
+        if head and not r15OriginalSizes["Head"] then
+            r15OriginalSizes["Head"] = head.Size
+        end
+        if leftArm and not r15OriginalSizes["LeftArm"] then
+            r15OriginalSizes["LeftArm"] = leftArm.Size
+        end
+        if rightArm and not r15OriginalSizes["RightArm"] then
+            r15OriginalSizes["RightArm"] = rightArm.Size
+        end
+        if leftLeg and not r15OriginalSizes["LeftLeg"] then
+            r15OriginalSizes["LeftLeg"] = leftLeg.Size
+        end
+        if rightLeg and not r15OriginalSizes["RightLeg"] then
+            r15OriginalSizes["RightLeg"] = rightLeg.Size
+        end
+
+        if head then
+            head.Size = Vector3.new(r15HeadReachX, r15HeadReachY, r15HeadReachZ)
+            head.CanCollide = false
+            head.Massless = true
+        end
+        if leftArm then
+            leftArm.Size = Vector3.new(r15LeftArmReachX, r15LeftArmReachY, r15LeftArmReachZ)
+            leftArm.CanCollide = false
+            leftArm.Massless = true
+        end
+        if rightArm then
+            rightArm.Size = Vector3.new(r15RightArmReachX, r15RightArmReachY, r15RightArmReachZ)
+            rightArm.CanCollide = false
+            rightArm.Massless = true
+        end
+        if leftLeg then
+            leftLeg.Size = Vector3.new(r15LeftLegReachX, r15LeftLegReachY, r15LeftLegReachZ)
+            leftLeg.CanCollide = false
+            leftLeg.Massless = true
+        end
+        if rightLeg then
+            rightLeg.Size = Vector3.new(r15RightLegReachX, r15RightLegReachY, r15RightLegReachZ)
+            rightLeg.CanCollide = false
+            rightLeg.Massless = true
+        end
+    end
+
+    local function resetR15Changes()
+        local char = player.Character
+        if not char then return end
+
+        local head = char:FindFirstChild("Head")
+        local leftArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm")
+        local rightArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("Right Arm")
+        local leftLeg = char:FindFirstChild("LeftUpperLeg") or char:FindFirstChild("Left Leg")
+        local rightLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("Right Leg")
+
+        if head and r15OriginalSizes["Head"] then
+            head.Size = r15OriginalSizes["Head"]
+            head.CanCollide = true
+            head.Massless = false
+        end
+        if leftArm and r15OriginalSizes["LeftArm"] then
+            leftArm.Size = r15OriginalSizes["LeftArm"]
+            leftArm.CanCollide = true
+            leftArm.Massless = false
+        end
+        if rightArm and r15OriginalSizes["RightArm"] then
+            rightArm.Size = r15OriginalSizes["RightArm"]
+            rightArm.CanCollide = true
+            rightArm.Massless = false
+        end
+        if leftLeg and r15OriginalSizes["LeftLeg"] then
+            leftLeg.Size = r15OriginalSizes["LeftLeg"]
+            leftLeg.CanCollide = true
+            leftLeg.Massless = false
+        end
+        if rightLeg and r15OriginalSizes["RightLeg"] then
+            rightLeg.Size = r15OriginalSizes["RightLeg"]
+            rightLeg.CanCollide = true
+            rightLeg.Massless = false
+        end
+
+        r15OriginalSizes = {}
+    end
+
     if isTPSLike and isSupportedExecutor then
         if SolaraLegTab then
             CreateToggle(SolaraLegTab, "Enable R6 Leg Reach", function(enabled)
@@ -2232,9 +2571,92 @@ task.delay(5, function()
                 end
             end)
         end
+        if R15ReachTab then
+            CreateToggle(R15ReachTab, "Enable R15 Reach", function(enabled)
+                r15ReachEnabled = enabled
+                resetR15Changes()
+                if enabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Head Reach X", 1, 10, 2, 0.1, function(v)
+                r15HeadReachX = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Head Reach Y", 1, 10, 2, 0.1, function(v)
+                r15HeadReachY = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Head Reach Z", 1, 10, 2, 0.1, function(v)
+                r15HeadReachZ = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Left Arm Reach X", 1, 10, 1.5, 0.1, function(v)
+                r15LeftArmReachX = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Left Arm Reach Y", 1, 15, 3, 0.1, function(v)
+                r15LeftArmReachY = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Left Arm Reach Z", 1, 10, 1.5, 0.1, function(v)
+                r15LeftArmReachZ = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Right Arm Reach X", 1, 10, 1.5, 0.1, function(v)
+                r15RightArmReachX = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Right Arm Reach Y", 1, 15, 3, 0.1, function(v)
+                r15RightArmReachY = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Right Arm Reach Z", 1, 10, 1.5, 0.1, function(v)
+                r15RightArmReachZ = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Left Leg Reach X", 1, 10, 1.5, 0.1, function(v)
+                r15LeftLegReachX = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Left Leg Reach Y", 1, 20, 4, 0.1, function(v)
+                r15LeftLegReachY = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Left Leg Reach Z", 1, 10, 1.5, 0.1, function(v)
+                r15LeftLegReachZ = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Right Leg Reach X", 1, 10, 1.5, 0.1, function(v)
+                r15RightLegReachX = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Right Leg Reach Y", 1, 20, 4, 0.1, function(v)
+                r15RightLegReachY = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+            CreateSlider(R15ReachTab, "Right Leg Reach Z", 1, 10, 1.5, 0.1, function(v)
+                r15RightLegReachZ = v
+                resetR15Changes()
+                if r15ReachEnabled then applyR15Changes() end
+            end)
+        end
         player.CharacterAdded:Connect(function(newChar)
             task.wait(1)
             if solaraEnabled or headReachEnabled then applySolaraChanges() end
+            if r15ReachEnabled then applyR15Changes() end
         end)
     end
 
