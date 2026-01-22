@@ -2378,8 +2378,16 @@ task.delay(5, function()
         end
         task.wait(0.15)
         if solaraEnabled or headReachEnabled then
-            hum:ApplyDescription(hum:GetAppliedDescription())
+            pcall(function()
+                hum:ApplyDescription(hum:GetAppliedDescription())
+            end)
         end
+    end
+
+    local function safeApplySolaraChanges()
+        pcall(function()
+            applySolaraChanges()
+        end)
     end
 
     local function resetSolaraChanges()
@@ -2468,6 +2476,12 @@ task.delay(5, function()
         end
     end
 
+    local function safeApplyR15Changes()
+        pcall(function()
+            applyR15Changes()
+        end)
+    end
+
     local function resetR15Changes()
         local char = player.Character
         if not char then return end
@@ -2512,17 +2526,17 @@ task.delay(5, function()
             CreateToggle(SolaraLegTab, "Enable R6 Leg Reach", function(enabled)
                 solaraEnabled = enabled
                 resetSolaraChanges()
-                if enabled then applySolaraChanges() end
+                if enabled then safeApplySolaraChanges() end
             end)
             CreateSlider(SolaraLegTab, "Leg Reach X", 1, 20, 1, 1, function(v)
                 legReachX = v
                 resetSolaraChanges()
-                if solaraEnabled then applySolaraChanges() end
+                if solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(SolaraLegTab, "Leg Reach Z", 1, 20, 1, 1, function(v)
                 legReachZ = v
                 resetSolaraChanges()
-                if solaraEnabled then applySolaraChanges() end
+                if solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(SolaraLegTab, "Visual Legs Transparency", 0, 1, 0, 0.05, function(v)
                 visualTransparency = v
@@ -2540,29 +2554,29 @@ task.delay(5, function()
             Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0,8)
             resetBtn.Activated:Connect(function()
                 resetSolaraChanges()
-                if solaraEnabled then applySolaraChanges() end
+                if solaraEnabled then safeApplySolaraChanges() end
             end)
         end
         if HeadReachTab then
             CreateToggle(HeadReachTab, "Head Reach Enabled", function(v)
                 headReachEnabled = v
                 resetSolaraChanges()
-                if v or solaraEnabled then applySolaraChanges() else resetSolaraChanges() end
+                if v or solaraEnabled then safeApplySolaraChanges() else resetSolaraChanges() end
             end)
             CreateSlider(HeadReachTab, "Head X Size", 1, 6, 2, 0.1, function(v)
                 headReachX = v
                 resetSolaraChanges()
-                if headReachEnabled or solaraEnabled then applySolaraChanges() end
+                if headReachEnabled or solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(HeadReachTab, "Head Y Size", 1, 6, 2, 0.1, function(v)
                 headReachY = v
                 resetSolaraChanges()
-                if headReachEnabled or solaraEnabled then applySolaraChanges() end
+                if headReachEnabled or solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(HeadReachTab, "Head Z Size", 1, 6, 2, 0.1, function(v)
                 headReachZ = v
                 resetSolaraChanges()
-                if headReachEnabled or solaraEnabled then applySolaraChanges() end
+                if headReachEnabled or solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateToggle(HeadReachTab, "Head Visualizer", function(v)
                 if v and not headVisSolara then
@@ -2577,88 +2591,88 @@ task.delay(5, function()
             CreateToggle(R15ReachTab, "Enable R15 Reach", function(enabled)
                 r15ReachEnabled = enabled
                 resetR15Changes()
-                if enabled then applyR15Changes() end
+                if enabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Head Reach X", 1, 10, 2, 0.1, function(v)
                 r15HeadReachX = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Head Reach Y", 1, 10, 2, 0.1, function(v)
                 r15HeadReachY = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Head Reach Z", 1, 10, 2, 0.1, function(v)
                 r15HeadReachZ = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Arm Reach X", 1, 10, 1.5, 0.1, function(v)
                 r15LeftArmReachX = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Arm Reach Y", 1, 15, 3, 0.1, function(v)
                 r15LeftArmReachY = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Arm Reach Z", 1, 10, 1.5, 0.1, function(v)
                 r15LeftArmReachZ = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Arm Reach X", 1, 10, 1.5, 0.1, function(v)
                 r15RightArmReachX = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Arm Reach Y", 1, 15, 3, 0.1, function(v)
                 r15RightArmReachY = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Arm Reach Z", 1, 10, 1.5, 0.1, function(v)
                 r15RightArmReachZ = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Leg Reach X", 1, 10, 1.5, 0.1, function(v)
                 r15LeftLegReachX = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Leg Reach Y", 1, 20, 4, 0.1, function(v)
                 r15LeftLegReachY = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Leg Reach Z", 1, 10, 1.5, 0.1, function(v)
                 r15LeftLegReachZ = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Leg Reach X", 1, 10, 1.5, 0.1, function(v)
                 r15RightLegReachX = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Leg Reach Y", 1, 20, 4, 0.1, function(v)
                 r15RightLegReachY = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Leg Reach Z", 1, 10, 1.5, 0.1, function(v)
                 r15RightLegReachZ = v
                 resetR15Changes()
-                if r15ReachEnabled then applyR15Changes() end
+                if r15ReachEnabled then safeApplyR15Changes() end
             end)
         end
         player.CharacterAdded:Connect(function(newChar)
             task.wait(1)
-            if solaraEnabled or headReachEnabled then applySolaraChanges() end
-            if r15ReachEnabled then applyR15Changes() end
+            if solaraEnabled or headReachEnabled then safeApplySolaraChanges() end
+            if r15ReachEnabled then safeApplyR15Changes() end
         end)
     end
 
@@ -2706,7 +2720,7 @@ task.delay(5, function()
     end
 
     if player.Character and isTPSLike and isSupportedExecutor then
-        applySolaraChanges()
+        safeApplySolaraChanges()
     end
 
     task.spawn(function()
