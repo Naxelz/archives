@@ -1033,25 +1033,25 @@ task.delay(5, function()
 
     local legOn, legX, legY, legZ = false, isMobile and 8 or 3.5, isMobile and 8 or 3.5, isMobile and 8 or 3.5
     local legShow = false
-    local armOn, armX, armY, armZ = false, isMobile and 8 or 3.5, isMobile and 8 or 3.5, isMobile and 8 or 3.5
+    local armOn, armX, armY, armZ = false, isMobile and 10 or 4, isMobile and 10 or 4, isMobile and 10 or 4
     local armShow = false
     local headOn, headSize = false, 3.5
     local headShow = false
 
     local legBurst = 1
-    local armBurst = 1
+    local armBurst = 2
     local headBurst = 2
 
     local reachSmart = true
     local reachPredict = true
-    local reachPredictTime = isMobile and 0.12 or 0.075
-    local reachUpdateInterval = isMobile and 0.04 or 0
-    local reachMaxPartsPerBall = isMobile and 6 or 3
+    local reachPredictTime = isMobile and 0.08 or 0.05
+    local reachUpdateInterval = isMobile and 0.016 or 0.01
+    local reachMaxPartsPerBall = isMobile and 8 or 5
     local lastReachUpdate = 0
 
-    local reactBetterSpeed = 1400
-    local reactOpSpeed = 1900
-    local reactBetterYBoost = 0.35
+    local reactBetterSpeed = 2000
+    local reactOpSpeed = 2800
+    local reactBetterYBoost = 0.5
     local reactImpulse = true
 
     local fireTouchFunc = nil
@@ -1136,22 +1136,20 @@ task.delay(5, function()
             local originalCFrame = part.CFrame
             local ballPos = ball.Position
             local dir = (ballPos - originalPos).Unit
-            local dist = (ballPos - originalPos).Magnitude
-            local moveDist = dist + 0.1
-            local targetPos = originalPos + dir * moveDist
+            local hitPos = ballPos + (originalPos - ballPos).Unit * (ball.Size.Magnitude / 2 + part.Size.Magnitude / 2)
+            local velVec = dir * 80
             
             for i = 1, burst do
                 pcall(function()
-                    local hitPos = ballPos + (originalPos - ballPos).Unit * (ball.Size.Magnitude / 2 + part.Size.Magnitude / 2)
                     part.CFrame = CFrame.new(hitPos, ballPos)
                 end)
                 
                 pcall(function()
-                    part.AssemblyLinearVelocity = (ballPos - originalPos).Unit * 50
+                    part.AssemblyLinearVelocity = velVec
                 end)
                 
                 pcall(function()
-                    part.Velocity = (ballPos - originalPos).Unit * 50
+                    part.Velocity = velVec
                 end)
                 
                 if part.CanCollide then
@@ -1791,7 +1789,7 @@ task.delay(5, function()
     local statusUpdateInterval = 0.25
 
     local lastReactUpdate = 0
-    local reactUpdateInterval = isMobile and 0.03 or 0.02
+    local reactUpdateInterval = isMobile and 0.02 or 0.015
 
     RunService.Heartbeat:Connect(function()
         local TPSSystem = Workspace:FindFirstChild("TPSSystem")
@@ -2256,10 +2254,10 @@ task.delay(5, function()
             end
         end)
         CreateToggle(ArmTab, "Arm Reach Enabled", function(v) armOn = v end)
-        CreateSlider(ArmTab, "Arm X Reach", 0, isMobile and 20 or 8, isMobile and 8 or 3.5, 0.1, function(v) armX = v end)
-        CreateSlider(ArmTab, "Arm Y Reach", 0, isMobile and 20 or 8, isMobile and 8 or 3.5, 0.1, function(v) armY = v end)
-        CreateSlider(ArmTab, "Arm Z Reach", 0, isMobile and 20 or 8, isMobile and 8 or 3.5, 0.1, function(v) armZ = v end)
-        CreateSlider(ArmTab, "Arm Touch Burst", 1, 5, armBurst, 1, function(v) armBurst = v end)
+        CreateSlider(ArmTab, "Arm X Reach", 0, isMobile and 25 or 10, isMobile and 10 or 4, 0.1, function(v) armX = v end)
+        CreateSlider(ArmTab, "Arm Y Reach", 0, isMobile and 25 or 10, isMobile and 10 or 4, 0.1, function(v) armY = v end)
+        CreateSlider(ArmTab, "Arm Z Reach", 0, isMobile and 25 or 10, isMobile and 10 or 4, 0.1, function(v) armZ = v end)
+        CreateSlider(ArmTab, "Arm Touch Burst", 1, 8, armBurst, 1, function(v) armBurst = v end)
         CreateToggle(ArmTab, "Arm Visualizer", function(v)
             armShow = v
             if v and not armVis then
