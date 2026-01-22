@@ -382,6 +382,7 @@ task.delay(5, function()
     Close.TextColor3 = MAIN_COLOR
     Close.Font = Enum.Font.GothamBold
     Close.TextSize = isMobile and 22 or 19
+    Close.Active = true
     Close.Parent = Main
 
     local Status = Instance.new("Frame")
@@ -941,13 +942,14 @@ task.delay(5, function()
         end
     end)
 
-    local character = player.Character or player.CharacterAdded:Wait()
+    local character = player.Character or pcall(function() return player.CharacterAdded:Wait() end) or player.Character
     local headPart, legs, arms = nil, {}, {}
 
     local legNames = {"LL","RL","Left Leg","Right Leg","Fake_LL","Fake_RL","LeftLowerLeg","LeftUpperLeg","RightLowerLeg","RightUpperLeg","LeftFoot","RightFoot"}
     local armNames = {"LA","RA","Left Arm","Right Arm","Fake_LA","Fake_RA","LeftLowerArm","LeftUpperArm","RightLowerArm","RightUpperArm","LeftHand","RightHand"}
 
     local function updateLimbs(c)
+        if not c then return end
         legs = {}
         arms = {}
         for _, n in ipairs(legNames) do
@@ -961,12 +963,12 @@ task.delay(5, function()
         headPart = c:FindFirstChild("Head") or c:FindFirstChild("H")
     end
 
-    updateLimbs(character)
+    pcall(function() updateLimbs(character) end)
 
     player.CharacterAdded:Connect(function(c)
         character = c
-        task.wait(1)
-        updateLimbs(c)
+        task.wait(isMobile and 1.5 or 1)
+        pcall(function() updateLimbs(c) end)
     end)
 
     local legVis, armVis, headVis = nil, nil, nil
@@ -984,9 +986,9 @@ task.delay(5, function()
         return p
     end
 
-    local legOn, legX, legY, legZ = false, 3.5, 3.5, 3.5
+    local legOn, legX, legY, legZ = false, isMobile and 8 or 3.5, isMobile and 8 or 3.5, isMobile and 8 or 3.5
     local legShow = false
-    local armOn, armX, armY, armZ = false, 3.5, 3.5, 3.5
+    local armOn, armX, armY, armZ = false, isMobile and 8 or 3.5, isMobile and 8 or 3.5, isMobile and 8 or 3.5
     local armShow = false
     local headOn, headSize = false, 3.5
     local headShow = false
@@ -997,9 +999,9 @@ task.delay(5, function()
 
     local reachSmart = true
     local reachPredict = true
-    local reachPredictTime = 0.075
-    local reachUpdateInterval = isMobile and 0.03 or 0
-    local reachMaxPartsPerBall = 3
+    local reachPredictTime = isMobile and 0.12 or 0.075
+    local reachUpdateInterval = isMobile and 0.04 or 0
+    local reachMaxPartsPerBall = isMobile and 6 or 3
     local lastReachUpdate = 0
 
     local reactBetterSpeed = 1400
@@ -1008,15 +1010,62 @@ task.delay(5, function()
     local reactImpulse = true
 
     local fireTouchFunc = nil
+    local hasFireTouchInterest = false
     pcall(function()
         if type(firetouchinterest) == "function" then
             fireTouchFunc = firetouchinterest
+            hasFireTouchInterest = true
         end
     end)
+    if not hasFireTouchInterest then
+        pcall(function()
+            local env = getfenv(0)
+            if env and type(env.firetouchinterest) == "function" then
+                fireTouchFunc = env.firetouchinterest
+                hasFireTouchInterest = true
+            end
+        end)
+    end
+    if not hasFireTouchInterest then
+        pcall(function()
+            local env = getfenv(1)
+            if env and type(env.firetouchinterest) == "function" then
+                fireTouchFunc = env.firetouchinterest
+                hasFireTouchInterest = true
+            end
+        end)
+    end
+    if not hasFireTouchInterest then
+        pcall(function()
+            local env = getfenv(2)
+            if env and type(env.firetouchinterest) == "function" then
+                fireTouchFunc = env.firetouchinterest
+                hasFireTouchInterest = true
+            end
+        end)
+    end
+    if not hasFireTouchInterest and type(debug) == "table" and type(debug.getregistry) == "function" then
+        pcall(function()
+            local registry = debug.getregistry()
+            if registry then
+                for _, v in pairs(registry) do
+                    if type(v) == "table" and type(v.firetouchinterest) == "function" then
+                        fireTouchFunc = v.firetouchinterest
+                        hasFireTouchInterest = true
+                        break
+                    end
+                end
+            end
+        end)
+    end
+    if not hasFireTouchInterest then
+        warn("NYX: firetouchinterest no encontrado. El reach puede no funcionar.")
+    end
     local fireTouchSwap = false
 
     local function fireTouch(a, b, state)
         if not fireTouchFunc then return end
+        if not a or not b then return end
         local x, y = a, b
         if fireTouchSwap then
             x, y = b, a
@@ -1031,9 +1080,46 @@ task.delay(5, function()
     end
 
     local function touchBurst(ball, part, burst)
-        for _ = 1, burst do
-            fireTouch(ball, part, 0)
-            fireTouch(ball, part, 1)
+        if not ball or not part then return end
+        if fireTouchFunc then
+            for _ = 1, burst do
+                fireTouch(ball, part, 0)
+                fireTouch(ball, part, 1)
+            end
+        else
+            local originalPos = part.Position
+            local originalCFrame = part.CFrame
+            local ballPos = ball.Position
+            local dir = (ballPos - originalPos).Unit
+            local dist = (ballPos - originalPos).Magnitude
+            local moveDist = dist + 0.1
+            local targetPos = originalPos + dir * moveDist
+            
+            for i = 1, burst do
+                pcall(function()
+                    local hitPos = ballPos + (originalPos - ballPos).Unit * (ball.Size.Magnitude / 2 + part.Size.Magnitude / 2)
+                    part.CFrame = CFrame.new(hitPos, ballPos)
+                end)
+                
+                pcall(function()
+                    part.AssemblyLinearVelocity = (ballPos - originalPos).Unit * 50
+                end)
+                
+                pcall(function()
+                    part.Velocity = (ballPos - originalPos).Unit * 50
+                end)
+                
+                if part.CanCollide then
+                    pcall(function()
+                        part.CanCollide = false
+                        part.CanCollide = true
+                    end)
+                end
+                
+                pcall(function()
+                    part.CFrame = originalCFrame
+                end)
+            end
         end
     end
 
@@ -1069,6 +1155,30 @@ task.delay(5, function()
 
     local function aabbInside(delta, x, y, z)
         return math.abs(delta.X) <= x and math.abs(delta.Y) <= y and math.abs(delta.Z) <= z
+    end
+
+    local function checkRaycastCollision(ball, part, reachX, reachY, reachZ)
+        if not ball or not part then return false end
+        local ballPos = ball.Position
+        local partPos = part.Position
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {player.Character}
+        
+        local directions = {
+            Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0),
+            Vector3.new(0, 1, 0), Vector3.new(0, -1, 0),
+            Vector3.new(0, 0, 1), Vector3.new(0, 0, -1)
+        }
+        
+        for _, dir in ipairs(directions) do
+            local targetPos = partPos + dir * Vector3.new(reachX, reachY, reachZ).Magnitude
+            local rayResult = Workspace:Raycast(ballPos, (targetPos - ballPos).Unit * ((targetPos - ballPos).Magnitude + 2), params)
+            if rayResult and rayResult.Instance == part then
+                return true
+            end
+        end
+        return false
     end
 
     local function applyReactVelocity(part, desiredVel)
@@ -1757,7 +1867,12 @@ task.delay(5, function()
                             local best, bestD = nil, math.huge
                             for _, l in ipairs(legs) do
                                 local delta = pos - l.Position
-                                if aabbInside(delta, legX, legY, legZ) then
+                                local insideAABB = aabbInside(delta, legX, legY, legZ)
+                                local hitByRay = false
+                                if not insideAABB or not fireTouchFunc then
+                                    hitByRay = checkRaycastCollision(ball, l, legX, legY, legZ)
+                                end
+                                if insideAABB or hitByRay then
                                     local d = delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z
                                     if d < bestD then
                                         bestD = d
@@ -1772,7 +1887,12 @@ task.delay(5, function()
                         else
                             for _, l in ipairs(legs) do
                                 local delta = pos - l.Position
-                                if aabbInside(delta, legX, legY, legZ) then
+                                local insideAABB = aabbInside(delta, legX, legY, legZ)
+                                local hitByRay = false
+                                if not insideAABB or not fireTouchFunc then
+                                    hitByRay = checkRaycastCollision(ball, l, legX, legY, legZ)
+                                end
+                                if insideAABB or hitByRay then
                                     touchBurst(ball, l, legBurst)
                                     touchedParts += 1
                                     if touchedParts >= reachMaxPartsPerBall then break end
@@ -1786,7 +1906,12 @@ task.delay(5, function()
                             local best, bestD = nil, math.huge
                             for _, a in ipairs(arms) do
                                 local delta = pos - a.Position
-                                if aabbInside(delta, armX, armY, armZ) then
+                                local insideAABB = aabbInside(delta, armX, armY, armZ)
+                                local hitByRay = false
+                                if not insideAABB or not fireTouchFunc then
+                                    hitByRay = checkRaycastCollision(ball, a, armX, armY, armZ)
+                                end
+                                if insideAABB or hitByRay then
                                     local d = delta.X * delta.X + delta.Y * delta.Y + delta.Z * delta.Z
                                     if d < bestD then
                                         bestD = d
@@ -1801,7 +1926,12 @@ task.delay(5, function()
                         else
                             for _, a in ipairs(arms) do
                                 local delta = pos - a.Position
-                                if aabbInside(delta, armX, armY, armZ) then
+                                local insideAABB = aabbInside(delta, armX, armY, armZ)
+                                local hitByRay = false
+                                if not insideAABB or not fireTouchFunc then
+                                    hitByRay = checkRaycastCollision(ball, a, armX, armY, armZ)
+                                end
+                                if insideAABB or hitByRay then
                                     touchBurst(ball, a, armBurst)
                                     touchedParts += 1
                                     if touchedParts >= reachMaxPartsPerBall then break end
@@ -1812,7 +1942,12 @@ task.delay(5, function()
 
                     if headOn and headPart and touchedParts < reachMaxPartsPerBall then
                         local d = pos - headPart.Position
-                        if (d.X * d.X + d.Y * d.Y + d.Z * d.Z) <= (headSize * headSize) then
+                        local insideAABB = (d.X * d.X + d.Y * d.Y + d.Z * d.Z) <= (headSize * headSize)
+                        local hitByRay = false
+                        if not insideAABB or not fireTouchFunc then
+                            hitByRay = checkRaycastCollision(ball, headPart, headSize, headSize, headSize)
+                        end
+                        if insideAABB or hitByRay then
                             touchBurst(ball, headPart, headBurst)
                             touchedParts += 1
                         end
@@ -2076,9 +2211,9 @@ task.delay(5, function()
 
     if not (isTPSLike and isSupportedExecutor) then
         CreateToggle(LegTab, "Leg Reach Enabled", function(v) legOn = v end)
-        CreateSlider(LegTab, "Leg X Reach", 0, 15, 3.5, 0.1, function(v) legX = v end)
-        CreateSlider(LegTab, "Leg Y Reach", 0, 15, 3.5, 0.1, function(v) legY = v end)
-        CreateSlider(LegTab, "Leg Z Reach", 0, 15, 3.5, 0.1, function(v) legZ = v end)
+        CreateSlider(LegTab, "Leg X Reach", 0, isMobile and 25 or 15, isMobile and 8 or 3.5, 0.1, function(v) legX = v end)
+        CreateSlider(LegTab, "Leg Y Reach", 0, isMobile and 25 or 15, isMobile and 8 or 3.5, 0.1, function(v) legY = v end)
+        CreateSlider(LegTab, "Leg Z Reach", 0, isMobile and 25 or 15, isMobile and 8 or 3.5, 0.1, function(v) legZ = v end)
         CreateSlider(LegTab, "Leg Touch Burst", 1, 5, legBurst, 1, function(v) legBurst = v end)
         CreateToggle(LegTab, "Leg Visualizer", function(v)
             legShow = v
@@ -2090,9 +2225,9 @@ task.delay(5, function()
             end
         end)
         CreateToggle(ArmTab, "Arm Reach Enabled", function(v) armOn = v end)
-        CreateSlider(ArmTab, "Arm X Reach", 0, 8, 3.5, 0.1, function(v) armX = v end)
-        CreateSlider(ArmTab, "Arm Y Reach", 0, 8, 3.5, 0.1, function(v) armY = v end)
-        CreateSlider(ArmTab, "Arm Z Reach", 0, 8, 3.5, 0.1, function(v) armZ = v end)
+        CreateSlider(ArmTab, "Arm X Reach", 0, isMobile and 20 or 8, isMobile and 8 or 3.5, 0.1, function(v) armX = v end)
+        CreateSlider(ArmTab, "Arm Y Reach", 0, isMobile and 20 or 8, isMobile and 8 or 3.5, 0.1, function(v) armY = v end)
+        CreateSlider(ArmTab, "Arm Z Reach", 0, isMobile and 20 or 8, isMobile and 8 or 3.5, 0.1, function(v) armZ = v end)
         CreateSlider(ArmTab, "Arm Touch Burst", 1, 5, armBurst, 1, function(v) armBurst = v end)
         CreateToggle(ArmTab, "Arm Visualizer", function(v)
             armShow = v
