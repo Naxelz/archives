@@ -309,6 +309,25 @@ task.delay(5, function()
         SetMinimized(false)
     end)
 
+    if UserInputService.TouchEnabled then
+        FloatButton.MouseButton1Down:Connect(function()
+            if not floatDragging then
+                SetMinimized(false)
+            end
+        end)
+
+        UserInputService.TouchTapInWorld:Connect(function(position, processed)
+            if processed then return end
+            local guiObjects = Player.PlayerGui:GetGuiObjectsAtPosition(position.X, position.Y)
+            for _, obj in ipairs(guiObjects) do
+                if obj == FloatButton then
+                    SetMinimized(false)
+                    break
+                end
+            end
+        end)
+    end
+
     local Main = Instance.new("Frame")
     Main.Size = mainSize
     Main.AnchorPoint = Vector2.new(0.5, 0.5)
