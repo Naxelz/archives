@@ -204,9 +204,24 @@ task.delay(5, function()
     UI.ResetOnSpawn = false
     UI.Parent = CoreGui
 
-    local isMobile = UIS.TouchEnabled and not UIS.MouseEnabled
-    local scale = isMobile and 0.9 or 1
-    local mainSize = UDim2.new(0, 640 * scale, 0, 470 * scale)
+    local isMobile = UIS.TouchEnabled
+
+    local function computeMainSize()
+        local cam = Workspace.CurrentCamera
+        local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+        local pad = isMobile and 24 or 40
+        local maxW = math.max(320, vp.X - pad)
+        local maxH = math.max(260, vp.Y - pad)
+        local w = math.min(640, maxW)
+        local h = math.min(470, maxH)
+        if isMobile then
+            w = math.min(w, math.floor(vp.X * 0.92))
+            h = math.min(h, math.floor(vp.Y * 0.66))
+        end
+        return UDim2.fromOffset(w, h)
+    end
+
+    local mainSize = computeMainSize()
 
     local FloatButton = Instance.new("TextButton")
     FloatButton.Size = UDim2.new(0, 60, 0, 60)
@@ -219,6 +234,7 @@ task.delay(5, function()
     FloatButton.TextSize = 20
     FloatButton.Visible = false
     FloatButton.ZIndex = 999
+    FloatButton.Active = true
     FloatButton.Parent = UI
     Instance.new("UICorner", FloatButton).CornerRadius = UDim.new(1, 0)
     local fbStroke = Instance.new("UIStroke", FloatButton)
@@ -226,9 +242,39 @@ task.delay(5, function()
     fbStroke.Thickness = 2.5
     fbStroke.Transparency = 0.5
 
+    FloatButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local dragStart = input.Position
+            local startPos = FloatButton.Position
+            local pressedAt = os.clock()
+            local moved = false
+            local moveConn
+            local endConn
+            moveConn = UIS.InputChanged:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
+                    local delta = inp.Position - dragStart
+                    if math.abs(delta.X) > 8 or math.abs(delta.Y) > 8 then
+                        moved = true
+                    end
+                    FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                end
+            end)
+            endConn = input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    moveConn:Disconnect()
+                    endConn:Disconnect()
+                    if not moved and (os.clock() - pressedAt) >= 0.75 then
+                        UI:Destroy()
+                    end
+                end
+            end)
+        end
+    end)
+
     local Main = Instance.new("Frame")
     Main.Size = mainSize
-    Main.Position = UDim2.new(0.5, -mainSize.X.Offset/2, 0.5, -mainSize.Y.Offset/2)
+    Main.AnchorPoint = Vector2.new(0.5, 0.5)
+    Main.Position = UDim2.fromScale(0.5, 0.5)
     Main.BackgroundColor3 = Color3.new(0,0,0)
     Main.BackgroundTransparency = 0.15
     Main.ClipsDescendants = true
@@ -238,6 +284,14 @@ task.delay(5, function()
     mainStroke.Color = MAIN_COLOR
     mainStroke.Thickness = 1.5
     mainStroke.Transparency = 0.7
+
+    if isMobile and Workspace.CurrentCamera then
+        Workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+            mainSize = computeMainSize()
+            Main.Size = mainSize
+            Main.Position = UDim2.fromScale(0.5, 0.5)
+        end)
+    end
 
     local Title = Instance.new("TextLabel")
     Title.AutomaticSize = Enum.AutomaticSize.X
@@ -251,6 +305,7 @@ task.delay(5, function()
     Title.TextSize = 20
     Title.TextXAlignment = Enum.TextXAlignment.Center
     Title.Parent = Main
+    Title.Active = true
 
     local TitleStroke = Instance.new("UIStroke", Title)
     TitleStroke.Color = Color3.fromRGB(40,40,40)
@@ -274,6 +329,7 @@ task.delay(5, function()
     TopLeftLogo.ImageColor3 = Color3.new(1, 1, 1)
     TopLeftLogo.ScaleType = Enum.ScaleType.Fit
     TopLeftLogo.Parent = Main
+    TopLeftLogo.Active = true
 
     TopLeftLogo.MouseEnter:Connect(function()
         TS:Create(TopLeftLogo, TweenInfo.new(0.2), {Size = UDim2.new(0, 46, 0, 46)}):Play()
@@ -332,32 +388,41 @@ task.delay(5, function()
     local dragging = false
     local dragStart, startPos
 
+    local topBarHeight = isMobile and 44 or 48
+
     local TopBarArea = Instance.new("Frame")
-    TopBarArea.Size = UDim2.new(1, 0, 0, 48)
+    TopBarArea.Size = UDim2.new(1, 0, 0, topBarHeight)
     TopBarArea.BackgroundTransparency = 1
     TopBarArea.ZIndex = 10
+    TopBarArea.Active = true
     TopBarArea.Parent = Main
 
-    TopBarArea.InputBegan:Connect(function(input)
+    local function beginWindowDrag(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = Main.Position
             local moveConn
+            local endConn
             moveConn = UIS.InputChanged:Connect(function(inp)
                 if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
                     local delta = inp.Position - dragStart
                     Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
                 end
             end)
-            input.Changed:Connect(function()
+            endConn = input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
                     moveConn:Disconnect()
+                    endConn:Disconnect()
                 end
             end)
         end
-    end)
+    end
+
+    TopBarArea.InputBegan:Connect(beginWindowDrag)
+    Title.InputBegan:Connect(beginWindowDrag)
+    TopLeftLogo.InputBegan:Connect(beginWindowDrag)
 
     local minimized = false
     local function SetMinimized(state)
@@ -385,13 +450,15 @@ task.delay(5, function()
     end)
 
     local Body = Instance.new("Frame")
-    Body.Size = UDim2.new(1,0,1,-48)
-    Body.Position = UDim2.new(0,0,0,48)
+    Body.Size = UDim2.new(1,0,1,-topBarHeight)
+    Body.Position = UDim2.new(0,0,0,topBarHeight)
     Body.BackgroundTransparency = 1
     Body.Parent = Main
 
+    local sidebarWidth = isMobile and 96 or 120
+
     local Sidebar = Instance.new("Frame")
-    Sidebar.Size = UDim2.new(0,120,1,0)
+    Sidebar.Size = UDim2.new(0,sidebarWidth,1,0)
     Sidebar.BackgroundColor3 = Color3.new(0,0,0)
     Sidebar.BackgroundTransparency = 0.92
     Sidebar.Parent = Body
@@ -408,8 +475,8 @@ task.delay(5, function()
     leftShadow.Parent = Sidebar
 
     local Content = Instance.new("ScrollingFrame")
-    Content.Size = UDim2.new(1,-120,1,0)
-    Content.Position = UDim2.new(0,120,0,0)
+    Content.Size = UDim2.new(1,-sidebarWidth,1,0)
+    Content.Position = UDim2.new(0,sidebarWidth,0,0)
     Content.BackgroundTransparency = 1
     Content.ScrollBarThickness = 0
     Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -419,15 +486,21 @@ task.delay(5, function()
     local TabContainers = {}
     local CurrentContainer = nil
 
+    local tabButtonHeight = isMobile and 30 or 34
+    local tabButtonSpacing = isMobile and 34 or 40
+    local tabButtonX = isMobile and 6 or 7
+    local tabButtonHoverX = tabButtonX + 3
+    local tabTopOffset = isMobile and 10 or 12
+
     local function AddTab(name)
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1,-14,0,34)
-        btn.Position = UDim2.new(0,7,0,#TabButtons * 40 + 12)
+        btn.Size = UDim2.new(1,-(tabButtonX*2),0,tabButtonHeight)
+        btn.Position = UDim2.new(0,tabButtonX,0,#TabButtons * tabButtonSpacing + tabTopOffset)
         btn.BackgroundTransparency = 1
         btn.Text = name
         btn.TextColor3 = Color3.fromRGB(200,200,220)
         btn.Font = Enum.Font.GothamSemibold
-        btn.TextSize = 13
+        btn.TextSize = isMobile and 12 or 13
         btn.Parent = Sidebar
         local stroke = Instance.new("UIStroke", btn)
         stroke.Color = Color3.fromRGB(40,40,40)
@@ -452,13 +525,13 @@ task.delay(5, function()
         btn.MouseEnter:Connect(function()
             if CurrentContainer == cont then return end
             TS:Create(stroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
-            TS:Create(btn, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(230,230,240), Position = UDim2.new(0,10,btn.Position.Y.Scale,btn.Position.Y.Offset)}):Play()
+            TS:Create(btn, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(230,230,240), Position = UDim2.new(0,tabButtonHoverX,btn.Position.Y.Scale,btn.Position.Y.Offset)}):Play()
         end)
 
         btn.MouseLeave:Connect(function()
             if CurrentContainer == cont then return end
             TS:Create(stroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
-            TS:Create(btn, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(200,200,220), Position = UDim2.new(0,7,btn.Position.Y.Scale,btn.Position.Y.Offset)}):Play()
+            TS:Create(btn, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(200,200,220), Position = UDim2.new(0,tabButtonX,btn.Position.Y.Scale,btn.Position.Y.Offset)}):Play()
         end)
 
         btn.MouseButton1Click:Connect(function()
@@ -505,7 +578,7 @@ task.delay(5, function()
     CurrentContainer = TabContainers[1]
 
     for i, btn in ipairs(TabButtons) do
-        btn.Position = UDim2.new(0,7,0,(i-1) * 40 + 12)
+        btn.Position = UDim2.new(0,tabButtonX,0,(i-1) * tabButtonSpacing + tabTopOffset)
     end
 
     local Avatar = Instance.new("ImageLabel")
@@ -582,16 +655,40 @@ task.delay(5, function()
         Instance.new("UICorner", c).CornerRadius = UDim.new(1,0)
 
         local on = false
-        f.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                on = not on
-                TS:Create(t, TweenInfo.new(0.2), {BackgroundColor3 = on and MAIN_COLOR or Color3.fromRGB(50,50,50)}):Play()
-                TS:Create(c, TweenInfo.new(0.2), {Position = on and UDim2.new(1,-20,0.5,-9) or UDim2.new(0,2,0.5,-9)}):Play()
+        local function render()
+            TS:Create(t, TweenInfo.new(0.2), {BackgroundColor3 = on and MAIN_COLOR or Color3.fromRGB(50,50,50)}):Play()
+            TS:Create(c, TweenInfo.new(0.2), {Position = on and UDim2.new(1,-20,0.5,-9) or UDim2.new(0,2,0.5,-9)}):Play()
+        end
+
+        local function setState(v, fireCallback)
+            if on == v then return end
+            on = v
+            render()
+            if fireCallback then
                 callback(on)
             end
+        end
+
+        f.Active = true
+        f.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                setState(not on, true)
+            end
         end)
-        return f
+
+        return {
+            Frame = f,
+            Set = function(_, v, fireCallback)
+                setState(v, fireCallback == true)
+            end,
+            Get = function()
+                return on
+            end,
+        }
     end
+
+    local activeSlider = nil
+    local sliderInputReady = false
 
     local function CreateSlider(parent, text, min, max, def, step, callback)
         local f = Instance.new("Frame")
@@ -632,30 +729,59 @@ task.delay(5, function()
         knob.Parent = s
         Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
 
-        local dragging = false
-        s.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-            end
-        end)
+        local sliderState = {
+            bar = s,
+            fill = fill,
+            knob = knob,
+            label = l,
+            text = text,
+            min = min,
+            max = max,
+            step = step,
+            callback = callback,
+            lastVal = def,
+        }
 
-        UIS.InputChanged:Connect(function(i)
-            if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-                local rel = math.clamp((i.Position.X - s.AbsolutePosition.X) / s.AbsoluteSize.X, 0, 1)
-                local val = min + rel * (max - min)
-                val = math.floor(val / step + 0.5) * step
-                fill.Size = UDim2.new(rel,0,1,0)
-                knob.Position = UDim2.new(rel, -8, 0.5, -8)
-                l.Text = text .. ": " .. string.format("%.1f", val)
-                callback(val)
-            end
-        end)
+        local function setFromX(x)
+            local rel = math.clamp((x - sliderState.bar.AbsolutePosition.X) / sliderState.bar.AbsoluteSize.X, 0, 1)
+            local val = sliderState.min + rel * (sliderState.max - sliderState.min)
+            val = math.floor(val / sliderState.step + 0.5) * sliderState.step
 
-        UIS.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
+            sliderState.fill.Size = UDim2.new(rel, 0, 1, 0)
+            sliderState.knob.Position = UDim2.new(rel, -8, 0.5, -8)
+            sliderState.label.Text = sliderState.text .. ": " .. string.format("%.1f", val)
+
+            if val ~= sliderState.lastVal then
+                sliderState.lastVal = val
+                sliderState.callback(val)
             end
-        end)
+        end
+
+        if not sliderInputReady then
+            sliderInputReady = true
+            UIS.InputChanged:Connect(function(i)
+                local s2 = activeSlider
+                if not s2 then return end
+                if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then
+                    s2.setFromX(i.Position.X)
+                end
+            end)
+            UIS.InputEnded:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                    activeSlider = nil
+                end
+            end)
+        end
+
+        local function beginDrag(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+                activeSlider = { setFromX = setFromX }
+                setFromX(i.Position.X)
+            end
+        end
+
+        s.InputBegan:Connect(beginDrag)
+        knob.InputBegan:Connect(beginDrag)
     end
 
     local autoInfFastKey = Enum.KeyCode.E
@@ -800,10 +926,30 @@ task.delay(5, function()
     local reactBetterYBoost = 0.35
     local reactImpulse = true
 
+    local fireTouchFunc = (type(firetouchinterest) == "function") and firetouchinterest or nil
+    local fireTouchSwap = false
+    local fireTouchOk = fireTouchFunc ~= nil
+
+    local function fireTouch(a, b, state)
+        if not fireTouchOk then return end
+        local x, y = a, b
+        if fireTouchSwap then
+            x, y = b, a
+        end
+        local ok = pcall(fireTouchFunc, x, y, state)
+        if ok then return end
+        local ok2 = pcall(fireTouchFunc, y, x, state)
+        if ok2 then
+            fireTouchSwap = not fireTouchSwap
+            return
+        end
+        fireTouchOk = false
+    end
+
     local function touchBurst(ball, part, burst)
         for _ = 1, burst do
-            firetouchinterest(ball, part, 0)
-            firetouchinterest(ball, part, 1)
+            fireTouch(ball, part, 0)
+            fireTouch(ball, part, 1)
         end
     end
 
@@ -860,6 +1006,17 @@ task.delay(5, function()
         return hum and hum:FindFirstChild("LLCL")
     end
 
+    local function setLLCLArg(args, llcl)
+        if args.n >= 2 then
+            args[2] = llcl
+        elseif args.n == 1 then
+            args[1] = llcl
+        else
+            args.n = 1
+            args[1] = llcl
+        end
+    end
+
     local removeHook
 
     local function installNoBallDelayHook()
@@ -870,15 +1027,15 @@ task.delay(5, function()
         currentHookMode = "NoBallDelay"
         setreadonly(mt, false)
         mt.__namecall = newcclosure(function(self, ...)
-            local args = {...}
+            local args = table.pack(...)
             local method = getnamecallmethod()
             if method == "FireServer" and noBallDelayOn then
                 local remoteName = tostring(self)
                 if noBallDelayRemotes[remoteName] then
                     local llcl = getLLCL()
                     if llcl then
-                        args[2] = llcl
-                        return old(self, unpack(args))
+                        setLLCLArg(args, llcl)
+                        return old(self, table.unpack(args, 1, args.n))
                     end
                 end
             end
@@ -1107,7 +1264,7 @@ task.delay(5, function()
     end
 
     if ReactTab then
-        CreateToggle(ReactTab, "No Ball Delay", function(v)
+        local NoBallDelayToggle = CreateToggle(ReactTab, "No Ball Delay", function(v)
             noBallDelayOn = v
             if v then
                 if not (attackerReactOn or midfielderReactOn or defenderReactOn or gkReactOn) then
@@ -1119,15 +1276,30 @@ task.delay(5, function()
                 end
             end
         end)
-        CreateToggle(ReactTab, "Better React", function(on)
+
+        local BetterReactToggle
+        local OPReactToggle
+        BetterReactToggle = CreateToggle(ReactTab, "Better React", function(on)
             betterReactOn = on
             opReactOn = false
+            if on and OPReactToggle then
+                OPReactToggle:Set(false, false)
+            end
         end)
-        CreateToggle(ReactTab, "OP React", function(on)
+        OPReactToggle = CreateToggle(ReactTab, "OP React", function(on)
             opReactOn = on
             betterReactOn = false
+            if on and BetterReactToggle then
+                BetterReactToggle:Set(false, false)
+            end
         end)
-        CreateToggle(ReactTab, "Attacker React", function(on)
+
+        local AttackerToggle
+        local MidfielderToggle
+        local DefenderToggle
+        local GKToggle
+
+        AttackerToggle = CreateToggle(ReactTab, "Attacker React", function(on)
             attackerReactOn = on
             if on then
                 removeHook()
@@ -1136,20 +1308,23 @@ task.delay(5, function()
                 currentHook = old
                 setreadonly(mt, false)
                 mt.__namecall = newcclosure(function(self, ...)
-                    local args = {...}
+                    local args = table.pack(...)
                     local method = getnamecallmethod()
                     if method == "FireServer" then
                         local remoteName = tostring(self)
                         if noBallDelayOn and noBallDelayRemotes[remoteName] then
                             local llcl = getLLCL()
                             if llcl then
-                                args[2] = llcl
-                                return old(self, unpack(args))
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
                             end
                         end
                         if remoteName == "KickG1" or remoteName == "KickG2" or remoteName == "KickC1" or remoteName == "KickC2" or remoteName == "KickP1" or remoteName == "KickP2" then
-                            args[2] = player.Character.Humanoid.LLCL
-                            return old(self, unpack(args))
+                            local llcl = getLLCL()
+                            if llcl then
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
+                            end
                         end
                     end
                     return old(self, ...)
@@ -1165,9 +1340,12 @@ task.delay(5, function()
                 midfielderReactOn = false
                 defenderReactOn = false
                 gkReactOn = false
+                if MidfielderToggle then MidfielderToggle:Set(false, false) end
+                if DefenderToggle then DefenderToggle:Set(false, false) end
+                if GKToggle then GKToggle:Set(false, false) end
             end
         end)
-        CreateToggle(ReactTab, "Midfielder React", function(on)
+        MidfielderToggle = CreateToggle(ReactTab, "Midfielder React", function(on)
             midfielderReactOn = on
             if on then
                 removeHook()
@@ -1176,20 +1354,23 @@ task.delay(5, function()
                 currentHook = old
                 setreadonly(mt, false)
                 mt.__namecall = newcclosure(function(self, ...)
-                    local args = {...}
+                    local args = table.pack(...)
                     local method = getnamecallmethod()
                     if method == "FireServer" then
                         local remoteName = tostring(self)
                         if noBallDelayOn and noBallDelayRemotes[remoteName] then
                             local llcl = getLLCL()
                             if llcl then
-                                args[2] = llcl
-                                return old(self, unpack(args))
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
                             end
                         end
                         if remoteName == "Tackle" or remoteName == "Header" or remoteName == "KickG1" or remoteName == "KickG2" or remoteName == "KickC1" or remoteName == "KickC2" or remoteName == "KickP1" or remoteName == "KickP2" then
-                            args[2] = player.Character.Humanoid.LLCL
-                            return old(self, unpack(args))
+                            local llcl = getLLCL()
+                            if llcl then
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
+                            end
                         end
                     end
                     return old(self, ...)
@@ -1205,9 +1386,12 @@ task.delay(5, function()
                 attackerReactOn = false
                 defenderReactOn = false
                 gkReactOn = false
+                if AttackerToggle then AttackerToggle:Set(false, false) end
+                if DefenderToggle then DefenderToggle:Set(false, false) end
+                if GKToggle then GKToggle:Set(false, false) end
             end
         end)
-        CreateToggle(ReactTab, "Defender React", function(on)
+        DefenderToggle = CreateToggle(ReactTab, "Defender React", function(on)
             defenderReactOn = on
             if on then
                 removeHook()
@@ -1216,20 +1400,23 @@ task.delay(5, function()
                 currentHook = old
                 setreadonly(mt, false)
                 mt.__namecall = newcclosure(function(self, ...)
-                    local args = {...}
+                    local args = table.pack(...)
                     local method = getnamecallmethod()
                     if method == "FireServer" then
                         local remoteName = tostring(self)
                         if noBallDelayOn and noBallDelayRemotes[remoteName] then
                             local llcl = getLLCL()
                             if llcl then
-                                args[2] = llcl
-                                return old(self, unpack(args))
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
                             end
                         end
                         if remoteName == "Tackle" or remoteName == "Header" then
-                            args[2] = player.Character.Humanoid.LLCL
-                            return old(self, unpack(args))
+                            local llcl = getLLCL()
+                            if llcl then
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
+                            end
                         end
                     end
                     return old(self, ...)
@@ -1245,9 +1432,12 @@ task.delay(5, function()
                 attackerReactOn = false
                 midfielderReactOn = false
                 gkReactOn = false
+                if AttackerToggle then AttackerToggle:Set(false, false) end
+                if MidfielderToggle then MidfielderToggle:Set(false, false) end
+                if GKToggle then GKToggle:Set(false, false) end
             end
         end)
-        CreateToggle(ReactTab, "GK React", function(on)
+        GKToggle = CreateToggle(ReactTab, "GK React", function(on)
             gkReactOn = on
             if on then
                 removeHook()
@@ -1256,20 +1446,23 @@ task.delay(5, function()
                 currentHook = old
                 setreadonly(mt, false)
                 mt.__namecall = newcclosure(function(self, ...)
-                    local args = {...}
+                    local args = table.pack(...)
                     local method = getnamecallmethod()
                     if method == "FireServer" then
                         local remoteName = tostring(self)
                         if noBallDelayOn and noBallDelayRemotes[remoteName] then
                             local llcl = getLLCL()
                             if llcl then
-                                args[2] = llcl
-                                return old(self, unpack(args))
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
                             end
                         end
                         if remoteName == "SaveRA" or remoteName == "SaveLA" or remoteName == "SaveRL" or remoteName == "SaveLL" or remoteName == "SaveT" or remoteName == "Tackle" or remoteName == "Header" then
-                            args[2] = player.Character.Humanoid.LLCL
-                            return old(self, unpack(args))
+                            local llcl = getLLCL()
+                            if llcl then
+                                setLLCLArg(args, llcl)
+                                return old(self, table.unpack(args, 1, args.n))
+                            end
                         end
                     end
                     return old(self, ...)
@@ -1285,6 +1478,9 @@ task.delay(5, function()
                 attackerReactOn = false
                 midfielderReactOn = false
                 defenderReactOn = false
+                if AttackerToggle then AttackerToggle:Set(false, false) end
+                if MidfielderToggle then MidfielderToggle:Set(false, false) end
+                if DefenderToggle then DefenderToggle:Set(false, false) end
             end
         end)
     end
@@ -1307,11 +1503,32 @@ task.delay(5, function()
 
         local hrp = character and character:FindFirstChild("HumanoidRootPart")
 
-        if tpsBall and tpsBall:IsA("BasePart") and (betterReactOn or opReactOn) then
+        local reactBall = nil
+        if tpsBall and tpsBall:IsA("BasePart") then
+            reactBall = tpsBall
+        elseif #ballList > 0 then
+            if hrp then
+                local best, bestD = nil, math.huge
+                for _, b in ipairs(ballList) do
+                    if b and b.Parent and b:IsA("BasePart") then
+                        local d = (b.Position - hrp.Position).Magnitude
+                        if d < bestD then
+                            bestD = d
+                            best = b
+                        end
+                    end
+                end
+                reactBall = best
+            else
+                reactBall = ballList[1]
+            end
+        end
+
+        if reactBall and (betterReactOn or opReactOn) then
             local curVel = Vector3.zero
-            pcall(function() curVel = tpsBall.AssemblyLinearVelocity end)
+            pcall(function() curVel = reactBall.AssemblyLinearVelocity end)
             if curVel.Magnitude == 0 then
-                pcall(function() curVel = tpsBall.Velocity end)
+                pcall(function() curVel = reactBall.Velocity end)
             end
 
             local baseSpeed = betterReactOn and reactBetterSpeed or reactOpSpeed
@@ -1327,7 +1544,7 @@ task.delay(5, function()
 
             local yBoost = betterReactOn and (reactBetterYBoost * speed) or 0
             local desiredVel = dir * speed + Vector3.new(0, yBoost, 0)
-            applyReactVelocity(tpsBall, desiredVel)
+            applyReactVelocity(reactBall, desiredVel)
         end
         if legShow and legVis and #legs > 0 and hrp then
             local sum = Vector3.new()
