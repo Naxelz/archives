@@ -2320,12 +2320,12 @@ task.delay(5, function()
     end
 
     local function applySolaraChanges()
-        local char = player.Character
-        if not char or char:FindFirstChild("Humanoid").RigType ~= Enum.HumanoidRigType.R6 then return end
+            local char = player.Character
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.RigType ~= Enum.HumanoidRigType.R6 then return end
         local head = char:FindFirstChild("Head")
         if not head then return end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hum then return end
         if not originalHeadSize then originalHeadSize = head.Size end
         if solaraEnabled then
             local realLeft = char:FindFirstChild("Left Leg")
@@ -2413,7 +2413,9 @@ task.delay(5, function()
 
     local function applyR15Changes()
         local char = player.Character
-        if not char or char:FindFirstChildOfClass("Humanoid").RigType ~= Enum.HumanoidRigType.R15 then return end
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.RigType ~= Enum.HumanoidRigType.R15 then return end
 
         local head = char:FindFirstChild("Head")
         local leftArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm")
