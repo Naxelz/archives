@@ -273,40 +273,40 @@ task.delay(5, function()
     fbStroke.Thickness = 2.5
     fbStroke.Transparency = 0.5
 
-    local isDraggingFloat = false
-    local dragStart, startPos
-    local floatStartTime = 0
+    local floatDragging = false
+    local floatDragStart
+    local floatStartPos
 
-    FloatButton.InputBegan:Connect(function(input)
+    local function beginFloatDrag(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragStart = input.Position
-            startPos = FloatButton.Position
-            isDraggingFloat = false
-            floatStartTime = tick()
+            floatDragStart = input.Position
+            floatStartPos = FloatButton.Position
+            floatDragging = false
         end
-    end)
+    end
 
-    FloatButton.InputChanged:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStart then
-            local delta = input.Position - dragStart
-            if delta.Magnitude > 15 then
-                isDraggingFloat = true
-                FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    local function updateFloatDrag(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and floatDragStart then
+            local delta = input.Position - floatDragStart
+            if delta.Magnitude > 20 then
+                floatDragging = true
+                FloatButton.Position = UDim2.new(floatStartPos.X.Scale, floatStartPos.X.Offset + delta.X, floatStartPos.Y.Scale, floatStartPos.Y.Offset + delta.Y)
             end
         end
-    end)
+    end
 
-    FloatButton.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local clickDuration = tick() - floatStartTime
-            if not isDraggingFloat and clickDuration < 0.3 then
-                SetMinimized(false)
-            end
-            dragStart = nil
-            startPos = nil
-            isDraggingFloat = false
-            floatStartTime = 0
-        end
+    local function endFloatDrag(input)
+        floatDragStart = nil
+        floatStartPos = nil
+        floatDragging = false
+    end
+
+    FloatButton.InputBegan:Connect(beginFloatDrag)
+    FloatButton.InputChanged:Connect(updateFloatDrag)
+    FloatButton.InputEnded:Connect(endFloatDrag)
+
+    FloatButton.Activated:Connect(function()
+        SetMinimized(false)
     end)
 
     local Main = Instance.new("Frame")
