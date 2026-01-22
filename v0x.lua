@@ -202,6 +202,7 @@ task.delay(5, function()
     local UI = Instance.new("ScreenGui")
     UI.Name = "KyroMPS"
     UI.ResetOnSpawn = false
+    UI.IgnoreGuiInset = true
     UI.Parent = CoreGui
 
     local isMobile = UIS.TouchEnabled
@@ -209,14 +210,17 @@ task.delay(5, function()
     local function computeMainSize()
         local cam = Workspace.CurrentCamera
         local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
-        local pad = isMobile and 24 or 40
+        local pad = isMobile and 16 or 40
         local maxW = math.max(320, vp.X - pad)
         local maxH = math.max(260, vp.Y - pad)
         local w = math.min(640, maxW)
         local h = math.min(470, maxH)
         if isMobile then
-            w = math.min(w, math.floor(vp.X * 0.92))
-            h = math.min(h, math.floor(vp.Y * 0.66))
+            local portrait = vp.Y > vp.X
+            local targetW = portrait and 0.94 or 0.86
+            local targetH = portrait and 0.62 or 0.72
+            w = math.min(w, math.floor(vp.X * targetW))
+            h = math.min(h, math.floor(vp.Y * targetH))
         end
         return UDim2.fromOffset(w, h)
     end
@@ -224,14 +228,15 @@ task.delay(5, function()
     local mainSize = computeMainSize()
 
     local FloatButton = Instance.new("TextButton")
-    FloatButton.Size = UDim2.new(0, 60, 0, 60)
+    local floatSize = isMobile and 66 or 60
+    FloatButton.Size = UDim2.new(0, floatSize, 0, floatSize)
     FloatButton.AnchorPoint = Vector2.new(1, 0)
     FloatButton.Position = UDim2.new(1, -10, 0, 10)
     FloatButton.BackgroundColor3 = Color3.new(0, 0, 0)
     FloatButton.Text = "NYX"
     FloatButton.TextColor3 = Color3.new(1, 1, 1)
     FloatButton.Font = Enum.Font.GothamBlack
-    FloatButton.TextSize = 20
+    FloatButton.TextSize = isMobile and 22 or 20
     FloatButton.Visible = false
     FloatButton.ZIndex = 999
     FloatButton.Active = true
@@ -246,16 +251,11 @@ task.delay(5, function()
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local dragStart = input.Position
             local startPos = FloatButton.Position
-            local pressedAt = os.clock()
-            local moved = false
             local moveConn
             local endConn
             moveConn = UIS.InputChanged:Connect(function(inp)
                 if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
                     local delta = inp.Position - dragStart
-                    if math.abs(delta.X) > 8 or math.abs(delta.Y) > 8 then
-                        moved = true
-                    end
                     FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
                 end
             end)
@@ -263,9 +263,6 @@ task.delay(5, function()
                 if input.UserInputState == Enum.UserInputState.End then
                     moveConn:Disconnect()
                     endConn:Disconnect()
-                    if not moved and (os.clock() - pressedAt) >= 0.75 then
-                        UI:Destroy()
-                    end
                 end
             end)
         end
@@ -339,23 +336,24 @@ task.delay(5, function()
     end)
 
     local Minimize = Instance.new("TextButton")
-    Minimize.Size = UDim2.new(0,32,0,32)
-    Minimize.Position = UDim2.new(1,-70,0,8)
+    local topBtnSize = isMobile and 42 or 32
+    Minimize.Size = UDim2.new(0,topBtnSize,0,topBtnSize)
+    Minimize.Position = UDim2.new(1,-(topBtnSize*2 + 8),0,6)
     Minimize.BackgroundTransparency = 1
     Minimize.Text = "-"
     Minimize.TextColor3 = Color3.fromRGB(200,200,200)
     Minimize.Font = Enum.Font.GothamBold
-    Minimize.TextSize = 26
+    Minimize.TextSize = isMobile and 30 or 26
     Minimize.Parent = Main
 
     local Close = Instance.new("TextButton")
-    Close.Size = UDim2.new(0,32,0,32)
-    Close.Position = UDim2.new(1,-36,0,8)
+    Close.Size = UDim2.new(0,topBtnSize,0,topBtnSize)
+    Close.Position = UDim2.new(1,-(topBtnSize + 6),0,6)
     Close.BackgroundTransparency = 1
     Close.Text = "X"
     Close.TextColor3 = MAIN_COLOR
     Close.Font = Enum.Font.GothamBold
-    Close.TextSize = 19
+    Close.TextSize = isMobile and 22 or 19
     Close.Parent = Main
 
     local Status = Instance.new("Frame")
@@ -380,7 +378,7 @@ task.delay(5, function()
     StatusLabel.Text = "NOT CONNECTED"
     StatusLabel.TextColor3 = Color3.fromRGB(255,0,0)
     StatusLabel.Font = Enum.Font.GothamBold
-    StatusLabel.TextSize = 10
+    StatusLabel.TextSize = isMobile and 12 or 10
     StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
     StatusLabel.ZIndex = 10
     StatusLabel.Parent = Status
@@ -455,13 +453,27 @@ task.delay(5, function()
     Body.BackgroundTransparency = 1
     Body.Parent = Main
 
-    local sidebarWidth = isMobile and 96 or 120
+    local function computeSidebarWidth()
+        local cam = Workspace.CurrentCamera
+        local vp = cam and cam.ViewportSize or Vector2.new(1280, 720)
+        local base = math.floor(vp.X * 0.18)
+        return math.clamp(base, 84, 112)
+    end
+
+    local sidebarWidth = isMobile and computeSidebarWidth() or 120
 
     local Sidebar = Instance.new("Frame")
     Sidebar.Size = UDim2.new(0,sidebarWidth,1,0)
     Sidebar.BackgroundColor3 = Color3.new(0,0,0)
     Sidebar.BackgroundTransparency = 0.92
     Sidebar.Parent = Body
+
+    local SidebarScroll = Instance.new("ScrollingFrame")
+    SidebarScroll.Size = UDim2.new(1,0,1,0)
+    SidebarScroll.BackgroundTransparency = 1
+    SidebarScroll.ScrollBarThickness = isMobile and 3 or 0
+    SidebarScroll.CanvasSize = UDim2.new(0,0,0,0)
+    SidebarScroll.Parent = Sidebar
 
     local blur = Instance.new("BlurEffect")
     blur.Size = 8
@@ -478,7 +490,7 @@ task.delay(5, function()
     Content.Size = UDim2.new(1,-sidebarWidth,1,0)
     Content.Position = UDim2.new(0,sidebarWidth,0,0)
     Content.BackgroundTransparency = 1
-    Content.ScrollBarThickness = 0
+    Content.ScrollBarThickness = isMobile and 3 or 0
     Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Content.Parent = Body
 
@@ -486,8 +498,8 @@ task.delay(5, function()
     local TabContainers = {}
     local CurrentContainer = nil
 
-    local tabButtonHeight = isMobile and 30 or 34
-    local tabButtonSpacing = isMobile and 34 or 40
+    local tabButtonHeight = isMobile and 36 or 34
+    local tabButtonSpacing = isMobile and 42 or 40
     local tabButtonX = isMobile and 6 or 7
     local tabButtonHoverX = tabButtonX + 3
     local tabTopOffset = isMobile and 10 or 12
@@ -500,8 +512,8 @@ task.delay(5, function()
         btn.Text = name
         btn.TextColor3 = Color3.fromRGB(200,200,220)
         btn.Font = Enum.Font.GothamSemibold
-        btn.TextSize = isMobile and 12 or 13
-        btn.Parent = Sidebar
+        btn.TextSize = isMobile and 14 or 13
+        btn.Parent = SidebarScroll
         local stroke = Instance.new("UIStroke", btn)
         stroke.Color = Color3.fromRGB(40,40,40)
         stroke.Thickness = 1
@@ -581,6 +593,11 @@ task.delay(5, function()
         btn.Position = UDim2.new(0,tabButtonX,0,(i-1) * tabButtonSpacing + tabTopOffset)
     end
 
+    do
+        local total = (#TabButtons - 1) * tabButtonSpacing + tabTopOffset + tabButtonHeight + 12
+        SidebarScroll.CanvasSize = UDim2.new(0, 0, 0, total)
+    end
+
     local Avatar = Instance.new("ImageLabel")
     Avatar.Size = UDim2.new(0,50,0,50)
     Avatar.Position = UDim2.new(0,16,0,16)
@@ -623,7 +640,7 @@ task.delay(5, function()
 
     local function CreateToggle(parent, text, callback)
         local f = Instance.new("Frame")
-        f.Size = UDim2.new(1,-20,0,32)
+        f.Size = UDim2.new(1,-20,0,isMobile and 38 or 32)
         f.BackgroundColor3 = Color3.fromRGB(18,18,18)
         f.BackgroundTransparency = 0.2
         f.Parent = parent
@@ -636,20 +653,23 @@ task.delay(5, function()
         l.BackgroundTransparency = 1
         l.TextColor3 = Color3.new(1,1,1)
         l.Font = Enum.Font.GothamSemibold
-        l.TextSize = 14
+        l.TextSize = isMobile and 15 or 14
         l.TextXAlignment = Enum.TextXAlignment.Left
         l.Parent = f
 
         local t = Instance.new("Frame")
-        t.Size = UDim2.new(0,44,0,22)
-        t.Position = UDim2.new(1,-56,0.5,-11)
+        local toggleW = isMobile and 52 or 44
+        local toggleH = isMobile and 26 or 22
+        t.Size = UDim2.new(0,toggleW,0,toggleH)
+        t.Position = UDim2.new(1,-(toggleW + 12),0.5,-(toggleH/2))
         t.BackgroundColor3 = Color3.fromRGB(50,50,50)
         t.Parent = f
-        Instance.new("UICorner", t).CornerRadius = UDim.new(0,11)
+        Instance.new("UICorner", t).CornerRadius = UDim.new(0,math.floor(toggleH/2))
 
         local c = Instance.new("Frame")
-        c.Size = UDim2.new(0,18,0,18)
-        c.Position = UDim2.new(0,2,0.5,-9)
+        local knobSize = isMobile and 22 or 18
+        c.Size = UDim2.new(0,knobSize,0,knobSize)
+        c.Position = UDim2.new(0,2,0.5,-(knobSize/2))
         c.BackgroundColor3 = Color3.new(1,1,1)
         c.Parent = t
         Instance.new("UICorner", c).CornerRadius = UDim.new(1,0)
@@ -657,7 +677,7 @@ task.delay(5, function()
         local on = false
         local function render()
             TS:Create(t, TweenInfo.new(0.2), {BackgroundColor3 = on and MAIN_COLOR or Color3.fromRGB(50,50,50)}):Play()
-            TS:Create(c, TweenInfo.new(0.2), {Position = on and UDim2.new(1,-20,0.5,-9) or UDim2.new(0,2,0.5,-9)}):Play()
+            TS:Create(c, TweenInfo.new(0.2), {Position = on and UDim2.new(1,-(knobSize+2),0.5,-(knobSize/2)) or UDim2.new(0,2,0.5,-(knobSize/2))}):Play()
         end
 
         local function setState(v, fireCallback)
@@ -692,7 +712,7 @@ task.delay(5, function()
 
     local function CreateSlider(parent, text, min, max, def, step, callback)
         local f = Instance.new("Frame")
-        f.Size = UDim2.new(1,-20,0,52)
+        f.Size = UDim2.new(1,-20,0,isMobile and 60 or 52)
         f.BackgroundColor3 = Color3.fromRGB(18,18,18)
         f.BackgroundTransparency = 0.2
         f.Parent = parent
@@ -705,26 +725,28 @@ task.delay(5, function()
         l.BackgroundTransparency = 1
         l.TextColor3 = Color3.new(1,1,1)
         l.Font = Enum.Font.GothamSemibold
-        l.TextSize = 14
+        l.TextSize = isMobile and 15 or 14
         l.TextXAlignment = Enum.TextXAlignment.Left
         l.Parent = f
 
         local s = Instance.new("Frame")
-        s.Size = UDim2.new(1,-24,0,6)
-        s.Position = UDim2.new(0,12,0,32)
+        local barH = isMobile and 8 or 6
+        s.Size = UDim2.new(1,-24,0,barH)
+        s.Position = UDim2.new(0,12,0,isMobile and 38 or 32)
         s.BackgroundColor3 = Color3.fromRGB(40,40,40)
         s.Parent = f
-        Instance.new("UICorner", s).CornerRadius = UDim.new(0,3)
+        Instance.new("UICorner", s).CornerRadius = UDim.new(0,math.floor(barH/2))
 
         local fill = Instance.new("Frame")
         fill.Size = UDim2.new((def-min)/(max-min),0,1,0)
         fill.BackgroundColor3 = MAIN_COLOR
         fill.Parent = s
-        Instance.new("UICorner", fill).CornerRadius = UDim.new(0,3)
+        Instance.new("UICorner", fill).CornerRadius = UDim.new(0,math.floor(barH/2))
 
         local knob = Instance.new("Frame")
-        knob.Size = UDim2.new(0,16,0,16)
-        knob.Position = UDim2.new((def-min)/(max-min), -8, 0.5, -8)
+        local knobPx = isMobile and 20 or 16
+        knob.Size = UDim2.new(0,knobPx,0,knobPx)
+        knob.Position = UDim2.new((def-min)/(max-min), -(knobPx/2), 0.5, -(knobPx/2))
         knob.BackgroundColor3 = Color3.new(1,1,1)
         knob.Parent = s
         Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
@@ -748,7 +770,7 @@ task.delay(5, function()
             val = math.floor(val / sliderState.step + 0.5) * sliderState.step
 
             sliderState.fill.Size = UDim2.new(rel, 0, 1, 0)
-            sliderState.knob.Position = UDim2.new(rel, -8, 0.5, -8)
+            sliderState.knob.Position = UDim2.new(rel, -(knobPx/2), 0.5, -(knobPx/2))
             sliderState.label.Text = sliderState.text .. ": " .. string.format("%.1f", val)
 
             if val ~= sliderState.lastVal then
@@ -799,6 +821,34 @@ task.delay(5, function()
     local airDribbleEnabled = false
     local airDribblePart = nil
     local airDribbleSize = 4.5
+
+    local updateZZZHelper
+    local updateAirDribbleHelper
+
+    local function CreateActionButton(parent, labelText, onClick)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -20, 0, isMobile and 38 or 32)
+        frame.BackgroundTransparency = 0.4
+        frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        frame.Parent = parent
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -10, 1, -10)
+        btn.Position = UDim2.new(0, 5, 0, 5)
+        btn.BackgroundTransparency = 0.35
+        btn.BackgroundColor3 = MAIN_COLOR
+        btn.Text = labelText
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.TextSize = isMobile and 14 or 13
+        btn.TextWrapped = true
+        btn.Parent = frame
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+        btn.MouseButton1Click:Connect(onClick)
+        return btn
+    end
 
     local function CreateKeybindButton(parent, currentKey, labelText, onChange)
         local frame = Instance.new("Frame")
@@ -917,7 +967,7 @@ task.delay(5, function()
     local reachSmart = true
     local reachPredict = true
     local reachPredictTime = 0.075
-    local reachUpdateInterval = 0
+    local reachUpdateInterval = isMobile and 0.03 or 0
     local reachMaxPartsPerBall = 3
     local lastReachUpdate = 0
 
@@ -928,10 +978,9 @@ task.delay(5, function()
 
     local fireTouchFunc = (type(firetouchinterest) == "function") and firetouchinterest or nil
     local fireTouchSwap = false
-    local fireTouchOk = fireTouchFunc ~= nil
 
     local function fireTouch(a, b, state)
-        if not fireTouchOk then return end
+        if not fireTouchFunc then return end
         local x, y = a, b
         if fireTouchSwap then
             x, y = b, a
@@ -943,7 +992,6 @@ task.delay(5, function()
             fireTouchSwap = not fireTouchSwap
             return
         end
-        fireTouchOk = false
     end
 
     local function touchBurst(ball, part, burst)
@@ -953,12 +1001,33 @@ task.delay(5, function()
         end
     end
 
+    local lastPartPos = setmetatable({}, {__mode = "k"})
+    local lastPartTime = setmetatable({}, {__mode = "k"})
+
     local function getAssemblyVelocity(p)
         local v = Vector3.zero
         pcall(function() v = p.AssemblyLinearVelocity end)
         if v.Magnitude == 0 then
             pcall(function() v = p.Velocity end)
         end
+
+        local now = os.clock()
+        local pos = p.Position
+        local lastPos = lastPartPos[p]
+        local lastT = lastPartTime[p]
+
+        if lastPos and lastT then
+            local dt = now - lastT
+            if dt > 0 and dt < 0.35 then
+                local derived = (pos - lastPos) / dt
+                if derived.Magnitude > v.Magnitude then
+                    v = derived
+                end
+            end
+        end
+
+        lastPartPos[p] = pos
+        lastPartTime[p] = now
         return v
     end
 
@@ -1157,18 +1226,34 @@ task.delay(5, function()
             TS:Create(applyBtn, TweenInfo.new(0.2), {BackgroundColor3 = MAIN_COLOR}):Play()
         end)
 
+        local autoInfQuickBtn, zzzQuickBtn, airDribbleQuickBtn
+
         CreateToggle(PlayerTab, "Auto Inf Fast", function(enabled)
             autoInfFastToggleEnabled = enabled
             if not enabled then
                 autoFollowEnabled = false
             end
+            if isMobile and autoInfQuickBtn then
+                autoInfQuickBtn.Text = "Auto Inf Fast: " .. (autoFollowEnabled and "ON" or "OFF")
+            end
         end)
 
-        CreateKeybindButton(PlayerTab, autoInfFastKey, "Auto Inf Fast Keybind", function(newKey)
-            autoInfFastKey = newKey
-        end)
+        if isMobile then
+            autoInfQuickBtn = CreateActionButton(PlayerTab, "Auto Inf Fast: OFF", function()
+                if autoInfFastToggleEnabled then
+                    autoFollowEnabled = not autoFollowEnabled
+                else
+                    autoFollowEnabled = false
+                end
+                autoInfQuickBtn.Text = "Auto Inf Fast: " .. (autoFollowEnabled and "ON" or "OFF")
+            end)
+        else
+            CreateKeybindButton(PlayerTab, autoInfFastKey, "Auto Inf Fast Keybind", function(newKey)
+                autoInfFastKey = newKey
+            end)
+        end
 
-        local function updateZZZHelper(enabled)
+        updateZZZHelper = function(enabled)
             zzzHelperEnabled = enabled
             local tpsSystem = Workspace:FindFirstChild("TPSSystem")
             if not tpsSystem then return end
@@ -1196,6 +1281,9 @@ task.delay(5, function()
                     zzzMarker = nil
                 end
             end
+            if isMobile and zzzQuickBtn then
+                zzzQuickBtn.Text = "ZZZ Helper: " .. (zzzHelperEnabled and "ON" or "OFF")
+            end
         end
 
         CreateToggle(PlayerTab, "ZZZ Helper", function(enabled)
@@ -1207,11 +1295,21 @@ task.delay(5, function()
             end
         end)
 
-        CreateKeybindButton(PlayerTab, zzzHelperKey, "ZZZ Helper Keybind", function(newKey)
-            zzzHelperKey = newKey
-        end)
+        if isMobile then
+            zzzQuickBtn = CreateActionButton(PlayerTab, "ZZZ Helper: OFF", function()
+                if zzzHelperToggleEnabled then
+                    updateZZZHelper(not zzzHelperEnabled)
+                else
+                    updateZZZHelper(false)
+                end
+            end)
+        else
+            CreateKeybindButton(PlayerTab, zzzHelperKey, "ZZZ Helper Keybind", function(newKey)
+                zzzHelperKey = newKey
+            end)
+        end
 
-        local function updateAirDribbleHelper(enabled)
+        updateAirDribbleHelper = function(enabled)
             airDribbleEnabled = enabled
             if enabled then
                 local tpsSystem = workspace:FindFirstChild("TPSSystem")
@@ -1244,6 +1342,9 @@ task.delay(5, function()
                     airDribblePart = nil
                 end
             end
+            if isMobile and airDribbleQuickBtn then
+                airDribbleQuickBtn.Text = "Air Dribble: " .. (airDribbleEnabled and "ON" or "OFF")
+            end
         end
 
         CreateToggle(PlayerTab, "Air Dribble Helper", function(enabled)
@@ -1251,9 +1352,19 @@ task.delay(5, function()
             updateAirDribbleHelper(enabled)
         end)
 
-        CreateKeybindButton(PlayerTab, airDribbleKey, "Air Dribble Helper Keybind", function(newKey)
-            airDribbleKey = newKey
-        end)
+        if isMobile then
+            airDribbleQuickBtn = CreateActionButton(PlayerTab, "Air Dribble: OFF", function()
+                if airDribbleHelperToggleEnabled then
+                    updateAirDribbleHelper(not airDribbleEnabled)
+                else
+                    updateAirDribbleHelper(false)
+                end
+            end)
+        else
+            CreateKeybindButton(PlayerTab, airDribbleKey, "Air Dribble Helper Keybind", function(newKey)
+                airDribbleKey = newKey
+            end)
+        end
 
         CreateSlider(PlayerTab, "Air Dribble Size", 1, 12, airDribbleSize, 0.5, function(value)
             airDribbleSize = value
@@ -1488,6 +1599,9 @@ task.delay(5, function()
     local lastStatusUpdate = 0
     local statusUpdateInterval = 0.25
 
+    local lastReactUpdate = 0
+    local reactUpdateInterval = isMobile and 0.03 or 0.02
+
     RunService.Heartbeat:Connect(function()
         local TPSSystem = Workspace:FindFirstChild("TPSSystem")
         local tpsBall = TPSSystem and TPSSystem:FindFirstChild("TPS")
@@ -1525,26 +1639,27 @@ task.delay(5, function()
         end
 
         if reactBall and (betterReactOn or opReactOn) then
-            local curVel = Vector3.zero
-            pcall(function() curVel = reactBall.AssemblyLinearVelocity end)
-            if curVel.Magnitude == 0 then
-                pcall(function() curVel = reactBall.Velocity end)
-            end
+            local nowReact = os.clock()
+            if (nowReact - lastReactUpdate) >= reactUpdateInterval then
+                lastReactUpdate = nowReact
 
-            local baseSpeed = betterReactOn and reactBetterSpeed or reactOpSpeed
-            local speed = baseSpeed
-            local dir
-            if curVel.Magnitude > 2 then
-                dir = curVel.Unit
-            elseif hrp then
-                dir = hrp.CFrame.LookVector
-            else
-                dir = Vector3.new(1, 0, 0)
-            end
+                local curVel = getAssemblyVelocity(reactBall)
 
-            local yBoost = betterReactOn and (reactBetterYBoost * speed) or 0
-            local desiredVel = dir * speed + Vector3.new(0, yBoost, 0)
-            applyReactVelocity(reactBall, desiredVel)
+                local baseSpeed = betterReactOn and reactBetterSpeed or reactOpSpeed
+                local speed = baseSpeed
+                local dir
+                if curVel.Magnitude > 4 then
+                    dir = curVel.Unit
+                elseif hrp then
+                    dir = hrp.CFrame.LookVector
+                else
+                    dir = Vector3.new(1, 0, 0)
+                end
+
+                local yBoost = betterReactOn and (reactBetterYBoost * speed) or 0
+                local desiredVel = dir * speed + Vector3.new(0, yBoost, 0)
+                applyReactVelocity(reactBall, desiredVel)
+            end
         end
         if legShow and legVis and #legs > 0 and hrp then
             local sum = Vector3.new()
@@ -1575,8 +1690,24 @@ task.delay(5, function()
             if reachUpdateInterval <= 0 or (now2 - lastReachUpdate) >= reachUpdateInterval then
                 lastReachUpdate = now2
 
+                local reachMaxSize = 0
+                if legOn then reachMaxSize = math.max(reachMaxSize, legX, legY, legZ) end
+                if armOn then reachMaxSize = math.max(reachMaxSize, armX, armY, armZ) end
+                if headOn then reachMaxSize = math.max(reachMaxSize, headSize) end
+                local reachDist = 40 + reachMaxSize * 4
+                local reachDistSq = reachDist * reachDist
+                local hrpPos = hrp and hrp.Position
+
                 local function processBall(ball)
                     if not ball or not ball.Parent then return end
+
+                    if hrpPos then
+                        local dp = ball.Position - hrpPos
+                        if (dp.X * dp.X + dp.Y * dp.Y + dp.Z * dp.Z) > reachDistSq then
+                            return
+                        end
+                    end
+
                     local pos = ball.Position
                     if reachPredict then
                         local vel = getAssemblyVelocity(ball)
@@ -1656,7 +1787,9 @@ task.delay(5, function()
                     processBall(tpsBall)
                 end
                 for _, ball in ipairs(ballList) do
-                    processBall(ball)
+                    if ball ~= tpsBall then
+                        processBall(ball)
+                    end
                 end
             end
         end
@@ -1680,13 +1813,17 @@ task.delay(5, function()
 
         if input.KeyCode == airDribbleKey then
             if airDribbleHelperToggleEnabled then
-                airDribbleEnabled = not airDribbleEnabled
+                if updateAirDribbleHelper then
+                    updateAirDribbleHelper(not airDribbleEnabled)
+                else
+                    airDribbleEnabled = not airDribbleEnabled
+                end
             end
         end
     end)
 
     local lastAutoFollow = 0
-    local autoFollowInterval = 0.1
+    local autoFollowInterval = isMobile and 0.14 or 0.1
     local autoFollowPredictTime = 0.12
 
     RunService.Heartbeat:Connect(function()
