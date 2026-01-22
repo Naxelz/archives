@@ -973,12 +973,17 @@ task.delay(5, function()
     local ballNames = {AIFA=true,VEF=true,VRF=true,CBM=true,TRS=true,TPS=true,Bomb=true,bomb=true,Ball=true,Football=true,SAML=true,SSS=true,RSA=true,IFF=true,MPS=true}
 
     local function isBall(p)
+        if not p or type(p.IsA) ~= "function" then return false end
         return p:IsA("BasePart") and ballNames[p.Name]
     end
 
-    for _, v in ipairs(Workspace:GetDescendants()) do
-        if isBall(v) then table.insert(ballList, v) end
-    end
+    pcall(function()
+        if type(Workspace.GetDescendants) == "function" then
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if isBall(v) then table.insert(ballList, v) end
+            end
+        end
+    end)
 
     Workspace.DescendantAdded:Connect(function(v)
         if isBall(v) then table.insert(ballList, v) end
@@ -1002,11 +1007,11 @@ task.delay(5, function()
         arms = {}
         for _, n in ipairs(legNames) do
             local p = c:FindFirstChild(n)
-            if p and p:IsA("BasePart") then table.insert(legs, p) end
+            if p and type(p.IsA) == "function" and p:IsA("BasePart") then table.insert(legs, p) end
         end
         for _, n in ipairs(armNames) do
             local p = c:FindFirstChild(n)
-            if p and p:IsA("BasePart") then table.insert(arms, p) end
+            if p and type(p.IsA) == "function" and p:IsA("BasePart") then table.insert(arms, p) end
         end
         headPart = c:FindFirstChild("Head") or c:FindFirstChild("H")
     end
@@ -1125,12 +1130,14 @@ task.delay(5, function()
         if fireTouchSwap then
             x, y = b, a
         end
-        local ok = pcall(fireTouchFunc, x, y, state)
-        if ok then return end
-        local ok2 = pcall(fireTouchFunc, y, x, state)
-        if ok2 then
-            fireTouchSwap = not fireTouchSwap
-            return
+        if type(fireTouchFunc) == "function" then
+            local ok = pcall(fireTouchFunc, x, y, state)
+            if ok then return end
+            local ok2 = pcall(fireTouchFunc, y, x, state)
+            if ok2 then
+                fireTouchSwap = not fireTouchSwap
+                return
+            end
         end
     end
 
@@ -1375,8 +1382,9 @@ task.delay(5, function()
         local currentStealTarget = nil
 
         local function RemoveOldAppearance(character)
+            if type(character.GetChildren) ~= "function" then return end
             for _, v in ipairs(character:GetChildren()) do
-                if v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("BodyColors") or v:IsA("ShirtGraphic") then
+                if type(v.IsA) == "function" and (v:IsA("Accessory") or v:IsA("Shirt") or v:IsA("Pants") or v:IsA("BodyColors") or v:IsA("ShirtGraphic")) then
                     v:Destroy()
                 end
             end
@@ -1397,9 +1405,12 @@ task.delay(5, function()
             RemoveOldAppearance(character)
             task.spawn(function()
                 local success, result = pcall(function()
+                    local Players = game:GetService("Players")
                     local userId = Players:GetUserIdFromNameAsync(username)
                     local desc = Players:GetHumanoidDescriptionFromUserId(userId)
-                    humanoid:ApplyDescriptionClientServer(desc)
+                    if type(humanoid.ApplyDescriptionClientServer) == "function" then
+                        humanoid:ApplyDescriptionClientServer(desc)
+                    end
                 end)
                 if success then
                     currentStealTarget = username
@@ -2027,7 +2038,7 @@ task.delay(5, function()
             if hrp then
                 local best, bestD = nil, math.huge
                 for _, b in ipairs(ballList) do
-                    if b and b.Parent and b:IsA("BasePart") then
+                    if b and b.Parent and type(b.IsA) == "function" and b:IsA("BasePart") then
                         local d = (b.Position - hrp.Position).Magnitude
                         if d < bestD then
                             bestD = d
@@ -2086,7 +2097,7 @@ task.delay(5, function()
                 applyReactVelocity(reactBall, desiredVel)
             end
         end
-        if legShow and legVis and #legs > 0 and hrp then
+        if legShow and legVis and #legs > 0 and hrp and hrp.CFrame then
             local sum = Vector3.new()
             for _, l in ipairs(legs) do sum = sum + l.Position end
             local center = sum / #legs
@@ -2095,7 +2106,7 @@ task.delay(5, function()
             legVis.Size = Vector3.new(legX*2, legY*2, legZ*2)
             legVis.Shape = Enum.PartType.Block
         end
-        if armShow and armVis and #arms > 0 and hrp then
+        if armShow and armVis and #arms > 0 and hrp and hrp.CFrame then
             local sum = Vector3.new()
             for _, a in ipairs(arms) do sum = sum + a.Position end
             local center = sum / #arms
@@ -2289,22 +2300,35 @@ task.delay(5, function()
     end)
 
     local solaraEnabled = false
-    local legReachX, legReachZ = 1, 1
-    local visualTransparency = 0
+    local reachConfig = {
+        legX = 1,
+        legZ = 1,
+        visualTransparency = 0,
+        headEnabled = false,
+        headX = 2,
+        headY = 2,
+        headZ = 2
+    }
     local fakeLeftLeg, fakeRightLeg = nil, nil
-    local headReachEnabled = false
-    local headReachX, headReachY, headReachZ = 2, 2, 2
     local originalHeadSize = nil
     local headVisSolara = nil
 
     local r15ReachEnabled = false
-    local r15HeadReachX, r15HeadReachY, r15HeadReachZ = 2, 2, 2
-    local r15LeftArmReachX, r15LeftArmReachY, r15LeftArmReachZ = 1.5, 3, 1.5
-    local r15RightArmReachX, r15RightArmReachY, r15RightArmReachZ = 1.5, 3, 1.5
-    local r15LeftLegReachX, r15LeftLegReachY, r15LeftLegReachZ = 1.5, 4, 1.5
-    local r15RightLegReachX, r15RightLegReachY, r15RightLegReachZ = 1.5, 4, 1.5
+    local r15ReachConfig = {
+        head = {2, 2, 2},
+        leftArm = {1.5, 3, 1.5},
+        rightArm = {1.5, 3, 1.5},
+        leftLeg = {1.5, 4, 1.5},
+        rightLeg = {1.5, 4, 1.5}
+    }
     local r15OriginalSizes = {}
-    local r15VisHead, r15VisLeftArm, r15VisRightArm, r15VisLeftLeg, r15VisRightLeg = nil, nil, nil, nil, nil
+    local r15VisParts = {
+        head = nil,
+        leftArm = nil,
+        rightArm = nil,
+        leftLeg = nil,
+        rightLeg = nil
+    }
 
     local function makeVisualizer(color)
         local p = Instance.new("Part")
@@ -2331,8 +2355,8 @@ task.delay(5, function()
             local realLeft = char:FindFirstChild("Left Leg")
             local realRight = char:FindFirstChild("Right Leg")
             if not realLeft or not realRight then return end
-            realLeft.Size = Vector3.new(legReachX, 2, legReachZ)
-            realRight.Size = Vector3.new(legReachX, 2, legReachZ)
+            realLeft.Size = Vector3.new(reachConfig.legX, 2, reachConfig.legZ)
+            realRight.Size = Vector3.new(reachConfig.legX, 2, reachConfig.legZ)
             realLeft.Transparency = 1
             realRight.Transparency = 1
             realLeft.CanCollide = false
@@ -2343,7 +2367,7 @@ task.delay(5, function()
             fakeLeftLeg.Name = "Left Leg"
             fakeLeftLeg.Size = Vector3.new(1, 2, 1)
             fakeLeftLeg.Color = realLeft.Color
-            fakeLeftLeg.Transparency = visualTransparency
+            fakeLeftLeg.Transparency = reachConfig.visualTransparency
             fakeLeftLeg.CanCollide = false
             fakeLeftLeg.Massless = true
             fakeLeftLeg.CFrame = realLeft.CFrame
@@ -2359,7 +2383,7 @@ task.delay(5, function()
             fakeRightLeg.Name = "Right Leg"
             fakeRightLeg.Size = Vector3.new(1, 2, 1)
             fakeRightLeg.Color = realRight.Color
-            fakeRightLeg.Transparency = visualTransparency
+            fakeRightLeg.Transparency = reachConfig.visualTransparency
             fakeRightLeg.CanCollide = false
             fakeRightLeg.Massless = true
             fakeRightLeg.CFrame = realRight.CFrame
@@ -2371,15 +2395,20 @@ task.delay(5, function()
             rightAtt.Name = "RightFootAttachment"
             rightAtt.Position = Vector3.new(0, -1, 0)
         end
-        if headReachEnabled then
-            head.Size = Vector3.new(headReachX, headReachY, headReachZ)
+        if reachConfig.headEnabled then
+            head.Size = Vector3.new(reachConfig.headX, reachConfig.headY, reachConfig.headZ)
             head.CanCollide = false
             head.Massless = true
         end
         task.wait(0.15)
-        if solaraEnabled or headReachEnabled then
+        if solaraEnabled or reachConfig.headEnabled then
             pcall(function()
-                hum:ApplyDescription(hum:GetAppliedDescription())
+                if hum and hum.Parent then
+                    local desc = hum:GetAppliedDescription()
+                    if desc then
+                        hum:ApplyDescription(desc)
+                    end
+                end
             end)
         end
     end
@@ -2450,27 +2479,27 @@ task.delay(5, function()
         end
 
         if head then
-            head.Size = Vector3.new(r15HeadReachX, r15HeadReachY, r15HeadReachZ)
+            head.Size = Vector3.new(r15ReachConfig.head[1], r15ReachConfig.head[2], r15ReachConfig.head[3])
             head.CanCollide = false
             head.Massless = true
         end
         if leftArm then
-            leftArm.Size = Vector3.new(r15LeftArmReachX, r15LeftArmReachY, r15LeftArmReachZ)
+            leftArm.Size = Vector3.new(r15ReachConfig.leftArm[1], r15ReachConfig.leftArm[2], r15ReachConfig.leftArm[3])
             leftArm.CanCollide = false
             leftArm.Massless = true
         end
         if rightArm then
-            rightArm.Size = Vector3.new(r15RightArmReachX, r15RightArmReachY, r15RightArmReachZ)
+            rightArm.Size = Vector3.new(r15ReachConfig.rightArm[1], r15ReachConfig.rightArm[2], r15ReachConfig.rightArm[3])
             rightArm.CanCollide = false
             rightArm.Massless = true
         end
         if leftLeg then
-            leftLeg.Size = Vector3.new(r15LeftLegReachX, r15LeftLegReachY, r15LeftLegReachZ)
+            leftLeg.Size = Vector3.new(r15ReachConfig.leftLeg[1], r15ReachConfig.leftLeg[2], r15ReachConfig.leftLeg[3])
             leftLeg.CanCollide = false
             leftLeg.Massless = true
         end
         if rightLeg then
-            rightLeg.Size = Vector3.new(r15RightLegReachX, r15RightLegReachY, r15RightLegReachZ)
+            rightLeg.Size = Vector3.new(r15ReachConfig.rightLeg[1], r15ReachConfig.rightLeg[2], r15ReachConfig.rightLeg[3])
             rightLeg.CanCollide = false
             rightLeg.Massless = true
         end
@@ -2529,17 +2558,17 @@ task.delay(5, function()
                 if enabled then safeApplySolaraChanges() end
             end)
             CreateSlider(SolaraLegTab, "Leg Reach X", 1, 20, 1, 1, function(v)
-                legReachX = v
+                reachConfig.legX = v
                 resetSolaraChanges()
                 if solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(SolaraLegTab, "Leg Reach Z", 1, 20, 1, 1, function(v)
-                legReachZ = v
+                reachConfig.legZ = v
                 resetSolaraChanges()
                 if solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(SolaraLegTab, "Visual Legs Transparency", 0, 1, 0, 0.05, function(v)
-                visualTransparency = v
+                reachConfig.visualTransparency = v
                 if fakeLeftLeg then fakeLeftLeg.Transparency = v end
                 if fakeRightLeg then fakeRightLeg.Transparency = v end
             end)
@@ -2559,24 +2588,24 @@ task.delay(5, function()
         end
         if HeadReachTab then
             CreateToggle(HeadReachTab, "Head Reach Enabled", function(v)
-                headReachEnabled = v
+                reachConfig.headEnabled = v
                 resetSolaraChanges()
                 if v or solaraEnabled then safeApplySolaraChanges() else resetSolaraChanges() end
             end)
             CreateSlider(HeadReachTab, "Head X Size", 1, 6, 2, 0.1, function(v)
-                headReachX = v
+                reachConfig.headX = v
                 resetSolaraChanges()
-                if headReachEnabled or solaraEnabled then safeApplySolaraChanges() end
+                if reachConfig.headEnabled or solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(HeadReachTab, "Head Y Size", 1, 6, 2, 0.1, function(v)
-                headReachY = v
+                reachConfig.headY = v
                 resetSolaraChanges()
-                if headReachEnabled or solaraEnabled then safeApplySolaraChanges() end
+                if reachConfig.headEnabled or solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateSlider(HeadReachTab, "Head Z Size", 1, 6, 2, 0.1, function(v)
-                headReachZ = v
+                reachConfig.headZ = v
                 resetSolaraChanges()
-                if headReachEnabled or solaraEnabled then safeApplySolaraChanges() end
+                if reachConfig.headEnabled or solaraEnabled then safeApplySolaraChanges() end
             end)
             CreateToggle(HeadReachTab, "Head Visualizer", function(v)
                 if v and not headVisSolara then
@@ -2594,84 +2623,84 @@ task.delay(5, function()
                 if enabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Head Reach X", 1, 10, 2, 0.1, function(v)
-                r15HeadReachX = v
+                r15ReachConfig.head[1] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Head Reach Y", 1, 10, 2, 0.1, function(v)
-                r15HeadReachY = v
+                r15ReachConfig.head[2] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Head Reach Z", 1, 10, 2, 0.1, function(v)
-                r15HeadReachZ = v
+                r15ReachConfig.head[3] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Arm Reach X", 1, 10, 1.5, 0.1, function(v)
-                r15LeftArmReachX = v
+                r15ReachConfig.leftArm[1] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Arm Reach Y", 1, 15, 3, 0.1, function(v)
-                r15LeftArmReachY = v
+                r15ReachConfig.leftArm[2] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Arm Reach Z", 1, 10, 1.5, 0.1, function(v)
-                r15LeftArmReachZ = v
+                r15ReachConfig.leftArm[3] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Arm Reach X", 1, 10, 1.5, 0.1, function(v)
-                r15RightArmReachX = v
+                r15ReachConfig.rightArm[1] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Arm Reach Y", 1, 15, 3, 0.1, function(v)
-                r15RightArmReachY = v
+                r15ReachConfig.rightArm[2] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Arm Reach Z", 1, 10, 1.5, 0.1, function(v)
-                r15RightArmReachZ = v
+                r15ReachConfig.rightArm[3] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Leg Reach X", 1, 10, 1.5, 0.1, function(v)
-                r15LeftLegReachX = v
+                r15ReachConfig.leftLeg[1] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Leg Reach Y", 1, 20, 4, 0.1, function(v)
-                r15LeftLegReachY = v
+                r15ReachConfig.leftLeg[2] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Left Leg Reach Z", 1, 10, 1.5, 0.1, function(v)
-                r15LeftLegReachZ = v
+                r15ReachConfig.leftLeg[3] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Leg Reach X", 1, 10, 1.5, 0.1, function(v)
-                r15RightLegReachX = v
+                r15ReachConfig.rightLeg[1] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Leg Reach Y", 1, 20, 4, 0.1, function(v)
-                r15RightLegReachY = v
+                r15ReachConfig.rightLeg[2] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
             CreateSlider(R15ReachTab, "Right Leg Reach Z", 1, 10, 1.5, 0.1, function(v)
-                r15RightLegReachZ = v
+                r15ReachConfig.rightLeg[3] = v
                 resetR15Changes()
                 if r15ReachEnabled then safeApplyR15Changes() end
             end)
         end
         player.CharacterAdded:Connect(function(newChar)
             task.wait(1)
-            if solaraEnabled or headReachEnabled then safeApplySolaraChanges() end
+            if solaraEnabled or reachConfig.headEnabled then safeApplySolaraChanges() end
             if r15ReachEnabled then safeApplyR15Changes() end
         end)
     end
