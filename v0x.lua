@@ -273,31 +273,35 @@ task.delay(5, function()
     fbStroke.Thickness = 2.5
     fbStroke.Transparency = 0.5
 
+    local isDraggingFloat = false
+    local dragStart, startPos
+
     FloatButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local dragStart = input.Position
-            local startPos = FloatButton.Position
-            local hasMoved = false
-            local moveConn
-            local endConn
-            moveConn = UIS.InputChanged:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
-                    local delta = inp.Position - dragStart
-                    if delta.Magnitude > 5 then
-                        hasMoved = true
-                        FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                    end
-                end
-            end)
-            endConn = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    moveConn:Disconnect()
-                    endConn:Disconnect()
-                    if not hasMoved then
-                        SetMinimized(false)
-                    end
-                end
-            end)
+            dragStart = input.Position
+            startPos = FloatButton.Position
+            isDraggingFloat = false
+        end
+    end)
+
+    FloatButton.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragStart then
+            local delta = input.Position - dragStart
+            if delta.Magnitude > 5 then
+                isDraggingFloat = true
+                FloatButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end
+    end)
+
+    FloatButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if not isDraggingFloat then
+                SetMinimized(false)
+            end
+            dragStart = nil
+            startPos = nil
+            isDraggingFloat = false
         end
     end)
 
@@ -362,6 +366,7 @@ task.delay(5, function()
     TopLeftLogo.ScaleType = Enum.ScaleType.Fit
     TopLeftLogo.Parent = Main
     TopLeftLogo.Active = true
+    TopLeftLogo.ZIndex = 100
 
     TopLeftLogo.MouseEnter:Connect(function()
         TS:Create(TopLeftLogo, TweenInfo.new(0.2), {Size = UDim2.new(0, 46, 0, 46)}):Play()
@@ -380,6 +385,7 @@ task.delay(5, function()
     Minimize.Font = Enum.Font.GothamBold
     Minimize.TextSize = isMobile and 30 or 26
     Minimize.Active = true
+    Minimize.ZIndex = 100
     Minimize.Parent = Main
 
     local Close = Instance.new("TextButton")
@@ -391,6 +397,7 @@ task.delay(5, function()
     Close.Font = Enum.Font.GothamBold
     Close.TextSize = isMobile and 22 or 19
     Close.Active = true
+    Close.ZIndex = 100
     Close.Parent = Main
 
     local Status = Instance.new("Frame")
@@ -474,18 +481,16 @@ task.delay(5, function()
         end
     end
 
-    Minimize.InputBegan:Connect(function(input)
+    Minimize.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local endConn
-            endConn = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    SetMinimized(not minimized)
-                    if endConn then endConn:Disconnect() end
-                end
-            end)
+            SetMinimized(not minimized)
         end
     end)
-    Close.Activated:Connect(function() UI:Destroy() end)
+    Close.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            UI:Destroy()
+        end
+    end)
 
     UIS.InputBegan:Connect(function(i)
         if i.KeyCode == Enum.KeyCode.RightShift then
